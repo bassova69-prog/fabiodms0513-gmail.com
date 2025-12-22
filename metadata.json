@@ -1,6 +1,6 @@
 {
   "name": "fabiodms",
-  "description": "Plateforme professionnelle pour Fabio : Vente de beats, Masterclass et Espace d'administration pour la gestion juridique et financière.",
+  "description": "Plateforme professionnelle pour Fabio : Vente de beats, Masterclass et Espace d'administration pour la gestion juridique et financière du Beatmaker.",
   "requestFramePermissions": [
     "camera"
   ]

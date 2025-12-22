@@ -5,7 +5,7 @@ import { Beat, Masterclass, FinancialData, License, Transaction, ScheduleEvent }
 export const ARTIST_NAME = "Fabio DMS";
 export const CREDITS = ["Warren Saada", "Tayc", "Dadju", "Soolking"];
 export const LOCATION = "Paris/Créteil";
-// Ta photo officielle (Lien direct raw)
+// Ta photo officielle fournie
 export const PROFILE_IMAGE_URL = "https://raw.githubusercontent.com/bassova69-prog/fabiodms0513-gmail.com/main/527337417_18517551331032986_3060701978807061030_n.jpg";
 
 export const MICRO_LIMITS = {
@@ -35,10 +35,10 @@ export const FEATURED_BEATS: Beat[] = [
   },
   {
     id: 'demo-2',
-    title: 'PRINCE | Zouk/Kompa Modern',
+    title: 'PRINCE | Afro Love Instrumental',
     bpm: 95,
     key: 'F# Major',
-    tags: ['Kompa', 'Zouk', 'Fabio'],
+    tags: ['Afro', 'Fabio'],
     coverUrl: 'https://images.unsplash.com/photo-1514525253361-bee8a187499b?w=500&auto=format&fit=crop&q=60',
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
     licenses: STANDARD_LICENSES,

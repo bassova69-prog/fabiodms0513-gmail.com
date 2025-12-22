@@ -24,7 +24,7 @@ export const TaxOptimization: React.FC = () => {
             <PieChart className="w-10 h-10 text-cyan-500" />
             Optimisation Fiscale <span className="text-amber-500">Micro-BNC</span>
         </h1>
-        <p className="text-[#a89080] mt-2 font-medium">Stratégies d'optimisation pour producteur de musique indépendant.</p>
+        <p className="text-[#a89080] mt-2 font-medium">Stratégies d'optimisation pour beatmaker indépendant.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -81,7 +81,7 @@ export const TaxOptimization: React.FC = () => {
                       </div>
                       <div>
                           <h3 className="font-bold text-2xl text-white tracking-tight">Expert Fiscal Fabio DMS</h3>
-                          <p className="text-sm text-[#8c7a6b]">Spécialisé en droits d'auteur, ACRE et micro-BNC.</p>
+                          <p className="text-sm text-[#8c7a6b]">Spécialisé en droits d'auteur, ACRE et micro-BNC pour beatmakers.</p>
                       </div>
                   </div>
 
@@ -94,7 +94,7 @@ export const TaxOptimization: React.FC = () => {
                       ) : (
                           <div className="h-full flex flex-col items-center justify-center opacity-30 text-center px-10">
                               <PieChart className="w-16 h-16 mb-4 text-[#3d2b1f]" />
-                              <p className="text-sm">Posez une question sur vos déclarations URSSAF, la TVA ou l'ACRE pour obtenir une simulation.</p>
+                              <p className="text-sm">Posez une question sur vos déclarations URSSAF, la TVA ou l'ACRE pour obtenir une simulation adaptée à votre activité de beatmaker.</p>
                           </div>
                       )}
                   </div>

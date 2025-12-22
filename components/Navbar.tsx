@@ -3,6 +3,7 @@ import React from 'react';
 import { Menu, Search, Bell, ShoppingCart } from 'lucide-react';
 import { ARTIST_NAME, PROFILE_IMAGE_URL } from '../constants';
 import { useCart } from '../contexts/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 interface NavbarProps {
   toggleSidebar: () => void;
@@ -10,6 +11,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
   const { cartCount, toggleCart } = useCart();
+  const navigate = useNavigate();
 
   return (
     <nav className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f]/95 backdrop-blur-md flex items-center justify-between px-4 z-50 border-b border-[#2a2a2a]">
@@ -18,18 +20,7 @@ export const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
           <Menu className="w-6 h-6" />
         </button>
         
-        <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.location.href = '/'}>
-          <div className="w-8 h-8 rounded-full border border-amber-500 overflow-hidden shadow-sm group-hover:scale-110 transition-transform duration-300">
-            <img 
-              src={PROFILE_IMAGE_URL} 
-              alt="Fabio Logo" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <span className="text-white font-black text-xl tracking-tighter uppercase italic hidden sm:block">
-            {ARTIST_NAME}
-          </span>
-        </div>
+        {/* Le bloc logo et nom a été supprimé ici pour épurer le coin haut gauche */}
       </div>
 
       <div className="hidden md:flex flex-1 max-w-2xl mx-10">

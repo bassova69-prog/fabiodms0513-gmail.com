@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Music, GraduationCap, Briefcase, Lock, Unlock, UploadCloud, FileDigit, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Home, Music, GraduationCap, Briefcase, Lock, Unlock, UploadCloud, FileDigit, ShieldAlert } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PROFILE_IMAGE_URL, ARTIST_NAME } from '../constants';
 
@@ -39,9 +39,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isAdmin, onLoginClick,
         </div>
         <div className="flex items-center gap-1">
             <h3 className="text-white font-bold text-sm uppercase tracking-tight">{ARTIST_NAME}</h3>
-            <CheckCircle2 className="w-3 h-3 text-blue-400 fill-current" />
         </div>
-        <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1">Producteur Platinum</p>
+        <p className="text-[10px] text-amber-500 font-bold uppercase tracking-widest mt-1">Beatmaker Platinum</p>
       </div>
 
       <div className="flex flex-col pt-3 flex-1 px-2">

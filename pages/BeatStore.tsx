@@ -6,15 +6,16 @@ import { Filter, ShoppingBag, Sparkles, Music } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Beat } from '../types';
 import { getAllBeats } from '../services/dbService';
+import { usePlayer } from '../contexts/PlayerContext';
 
 export const BeatStore: React.FC = () => {
   const { cartCount, toggleCart } = useCart();
+  const { playBeat } = usePlayer();
   const [beats, setBeats] = useState<Beat[]>([]);
 
   const loadBeats = async () => {
     try {
       const savedCustomBeats = await getAllBeats();
-      // On combine les beats personnalisés (nouveaux d'abord) avec les beats statiques
       setBeats([...[...savedCustomBeats].reverse(), ...FEATURED_BEATS]);
     } catch (e) {
       console.error("Error loading beats from storage:", e);
@@ -24,10 +25,14 @@ export const BeatStore: React.FC = () => {
 
   useEffect(() => {
     loadBeats();
-    // On écoute quand même le storage pour les triggers simples si nécessaire
     window.addEventListener('storage', loadBeats);
     return () => window.removeEventListener('storage', loadBeats);
   }, []);
+
+  const handlePlayBeat = (beat: Beat) => {
+    // On passe la liste complète des beats pour activer le Suivant/Précédent
+    playBeat(beat, beats);
+  };
 
   return (
     <div className="pb-20">
@@ -83,7 +88,9 @@ export const BeatStore: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-8">
           {beats.length > 0 ? (
             beats.map((beat) => (
-              <BeatCard key={beat.id} beat={beat} />
+              <div key={beat.id} onClick={() => handlePlayBeat(beat)}>
+                <BeatCard beat={beat} />
+              </div>
             ))
           ) : (
              <div className="col-span-full py-20 text-center flex flex-col items-center justify-center opacity-30">
