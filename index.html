@@ -10,19 +10,17 @@
     <style>
       body {
         font-family: 'Roboto', sans-serif;
-        background-color: #120a05;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        background-color: #0f0f0f;
         color: #fff8f0;
         overflow-x: hidden;
       }
       ::-webkit-scrollbar { width: 8px; }
-      ::-webkit-scrollbar-track { background: #120a05; }
+      ::-webkit-scrollbar-track { background: #0f0f0f; }
       ::-webkit-scrollbar-thumb {
-        background: #5c3a21;
+        background: #3d2b1f;
         border-radius: 4px;
-        border: 1px solid #120a05;
       }
-      ::-webkit-scrollbar-thumb:hover { background: #d97706; }
+      ::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       .animate-in { animation-duration: 300ms; animation-fill-mode: both; }
       .fade-in { animation-name: fadeIn; }
@@ -31,15 +29,15 @@
   <script type="importmap">
 {
   "imports": {
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3"
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
