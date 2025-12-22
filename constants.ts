@@ -5,7 +5,7 @@ import { Beat, Masterclass, FinancialData, LegalAdvice, LegalStatus, License, Tr
 export const ARTIST_NAME = "Fabio DMS";
 export const CREDITS = ["Warren Saada", "Tayc", "Dadju", "Soolking"];
 export const LOCATION = "Paris/Créteil";
-export const PROFILE_IMAGE_URL = "https://drive.google.com/file/d/1Ssj6mLzRWnvMl2pLpA921319DW4u_Lkl/view?usp=drive_link";
+export const PROFILE_IMAGE_URL = "https://raw.githubusercontent.com/bassova69-prog/fabiodms0513-gmail.com/main/527337417_18517551331032986_3060701978807061030_n.jpg";
 
 // Seuils Micro-Entreprise 2025 (BNC - Prestations de services)
 export const MICRO_LIMITS = {
