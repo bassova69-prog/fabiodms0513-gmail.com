@@ -1,10 +1,11 @@
 
-import { Beat, Masterclass, FinancialData, LegalAdvice, LegalStatus, License, Transaction, ScheduleEvent } from './types';
+import { Beat, Masterclass, FinancialData, LegalStatus, License, Transaction, ScheduleEvent } from './types';
 
 // Fabio's Context
 export const ARTIST_NAME = "Fabio DMS";
 export const CREDITS = ["Warren Saada", "Tayc", "Dadju", "Soolking"];
 export const LOCATION = "Paris/Créteil";
+// Utilisation du lien RAW pour que l'image s'affiche directement sur le site
 export const PROFILE_IMAGE_URL = "https://raw.githubusercontent.com/bassova69-prog/fabiodms0513-gmail.com/main/527337417_18517551331032986_3060701978807061030_n.jpg";
 
 // Seuils Micro-Entreprise 2025 (BNC - Prestations de services)
@@ -58,7 +59,24 @@ export const FEATURED_BEATS: Beat[] = [
 ];
 
 export const MASTERCLASSES: Masterclass[] = [
-  { id: 'mc1', title: "Secrets de Production Afro-Love", description: "Mélodies pour Tayc & Dadju.", price: 97, duration: "4h 30m", level: "Intermédiaire", thumbnailUrl: "https://images.unsplash.com/photo-1598653222000-6b7b7a552625?w=500&auto=format&fit=crop&q=60" }
+  { 
+    id: 'mc1', 
+    title: "Secrets de Production Afro-Love", 
+    description: "Apprends à composer des mélodies pour Tayc & Dadju. Mixage et sound design complet.", 
+    price: 97, 
+    duration: "4h 30m", 
+    level: "Intermédiaire", 
+    thumbnailUrl: "https://images.unsplash.com/photo-1598653222000-6b7b7a552625?w=500&auto=format&fit=crop&q=60" 
+  },
+  { 
+    id: 'mc2', 
+    title: "Rythmiques Kompa Modernes", 
+    description: "Le secret du groove Kompa/Zouk actuel. Percussions et lignes de basse.", 
+    price: 75, 
+    duration: "3h 15m", 
+    level: "Débutant", 
+    thumbnailUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=60" 
+  }
 ];
 
 // Financial Projection Spécial Micro (ACRE + BNC)

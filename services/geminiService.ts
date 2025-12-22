@@ -1,11 +1,10 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Safe access to API Key to avoid top-level crashes
-const getAIInstance = () => {
-  const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : '';
-  return new GoogleGenAI({ apiKey: apiKey || '' });
-};
+// Initialize Google GenAI following official guidelines: 
+// 1. Must use named parameter { apiKey: process.env.API_KEY }.
+// 2. process.env.API_KEY is pre-configured and accessible.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const FISCAL_EXPERT_INSTRUCTION = `
 Tu es l'Expert Fiscal personnel de Fabio DMS, un producteur de musique (Beatmaker) sous le statut de Micro-Entreprise BNC (Bénéfices Non Commerciaux).
@@ -25,8 +24,10 @@ Extrais : Date (DD/MM/YYYY), Label (Émetteur), CustomerName (Fabio ou Client), 
 Réponds UNIQUEMENT au format JSON.
 `;
 
+/**
+ * analyzeInvoice: Simple extraction task using gemini-3-flash-preview.
+ */
 export const analyzeInvoice = async (base64Data: string, mimeType: string): Promise<any> => {
-  const ai = getAIInstance();
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -53,6 +54,7 @@ export const analyzeInvoice = async (base64Data: string, mimeType: string): Prom
         }
       }
     });
+    // Property .text returns the extracted string output. Do not use text().
     return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Gemini Invoice Analysis Error:", error);
@@ -60,34 +62,42 @@ export const analyzeInvoice = async (base64Data: string, mimeType: string): Prom
   }
 };
 
+/**
+ * askTaxAdvisor: Complex reasoning task using gemini-3-pro-preview.
+ */
 export const askTaxAdvisor = async (question: string): Promise<string> => {
-  const ai = getAIInstance();
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3-pro-preview",
       contents: `Question fiscale de Fabio : "${question}"`,
       config: {
         systemInstruction: FISCAL_EXPERT_INSTRUCTION,
       },
     });
+    // Property .text returns the extracted string output. Do not use text().
     return response.text || "Désolé, analyse impossible.";
   } catch (error) {
+    console.error("Gemini Tax Advisor Error:", error);
     return "Erreur API Gemini.";
   }
 };
 
+/**
+ * analyzeContract: Complex legal analysis task using gemini-3-pro-preview.
+ */
 export const analyzeContract = async (contractText: string): Promise<string> => {
-  const ai = getAIInstance();
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3-pro-preview",
       contents: `Analyse ce contrat d'édition/production : \n\n"${contractText}"`,
       config: {
         systemInstruction: "Tu es un assistant juridique pour beatmakers spécialisé en droit de la propriété intellectuelle.",
       },
     });
+    // Property .text returns the extracted string output. Do not use text().
     return response.text || "Désolé, analyse impossible.";
   } catch (error) {
+    console.error("Gemini Contract Analysis Error:", error);
     return "Erreur API Gemini.";
   }
 };

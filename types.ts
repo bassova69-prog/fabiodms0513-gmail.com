@@ -10,14 +10,14 @@ export interface License {
 
 export interface Beat {
   id: string;
-  title: string; // "AMOUR | Tayc Type Beat"
+  title: string;
   bpm: number;
   key: string;
   tags: string[];
   audioUrl?: string;
   coverUrl: string;
-  licenses: License[]; // New leasing structure
-  youtubeId?: string; // For the funnel
+  licenses: License[];
+  youtubeId?: string;
   description?: string;
 }
 
@@ -44,15 +44,8 @@ export enum LegalStatus {
   SASU = 'SASU'
 }
 
-export interface LegalAdvice {
-  status: LegalStatus;
-  pros: string[];
-  cons: string[];
-  recommendationScore: number; // 1-10
-}
-
 export interface CartItem {
-  id: string; // Unique ID for the cart entry (beatId + licenseId)
+  id: string;
   beat: Beat;
   license: License;
 }
@@ -61,18 +54,26 @@ export interface Transaction {
   id: string;
   date: string;
   label: string;
-  customer?: string; // Nom du client ou de la société facturée
+  customer?: string;
   category: 'VENTE' | 'SACEM' | 'AIDE' | 'CHARGE_FIXE' | 'MATERIEL' | 'SERVICE';
   amount: number;
   type: 'IN' | 'OUT';
   status: 'PAYÉ' | 'EN_ATTENTE';
 }
 
+export interface ContractArchive {
+  id: string;
+  title: string;
+  date: string;
+  content: string;
+  analysis: string;
+}
+
 export interface ScheduleEvent {
   id: string;
   title: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:MM
+  date: string;
+  time: string;
   type: 'STUDIO' | 'DEADLINE' | 'ADMIN';
   status: 'PENDING' | 'DONE';
   artist?: string;

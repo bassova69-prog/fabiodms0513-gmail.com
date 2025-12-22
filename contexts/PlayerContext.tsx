@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { Beat } from '../types';
 
 interface PlayerContextType {
@@ -20,46 +20,43 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Gestion du raccourci Espace global
+  const togglePlay = useCallback(() => {
+    if (!audioRef.current) return;
+    
+    if (audioRef.current.paused) {
+        audioRef.current.play().catch(e => console.error("Playback failed", e));
+    } else {
+        audioRef.current.pause();
+    }
+  }, []);
+
+  // Gestion robuste du raccourci Espace global
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ne pas déclencher si l'utilisateur tape dans un input, textarea ou contentEditable
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' || 
-        target.tagName === 'TEXTAREA' || 
-        target.isContentEditable
-      ) {
-        return;
-      }
-
       if (e.code === 'Space') {
-        e.preventDefault(); // Empêche le scroll de la page
-        togglePlay();
+        const activeElement = document.activeElement as HTMLElement;
+        const isTyping = 
+          activeElement.tagName === 'INPUT' || 
+          activeElement.tagName === 'TEXTAREA' || 
+          activeElement.isContentEditable;
+
+        if (!isTyping) {
+          e.preventDefault(); // Bloque le scroll
+          togglePlay();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentBeat, isPlaying]); // Dépendances pour avoir l'état frais dans togglePlay
+  }, [togglePlay]);
 
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  const playBeat = (beat: Beat) => {
-    // Si on clique sur le même beat
+  const playBeat = useCallback((beat: Beat) => {
     if (currentBeat?.id === beat.id) {
       togglePlay();
       return;
     }
 
-    // Nouveau beat
     if (audioRef.current) {
       audioRef.current.pause();
     }
@@ -84,22 +81,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         audio.play().catch(e => console.error("Playback failed", e));
         setCurrentBeat(beat);
-        setIsPlaying(true);
     }
-  };
+  }, [currentBeat, togglePlay]);
 
   const pauseBeat = () => {
     if (audioRef.current) {
       audioRef.current.pause();
-    }
-  };
-
-  const togglePlay = () => {
-    if (!currentBeat || !audioRef.current) return;
-    if (audioRef.current.paused) {
-        audioRef.current.play().catch(e => console.error("Playback resume failed", e));
-    } else {
-        audioRef.current.pause();
     }
   };
 
