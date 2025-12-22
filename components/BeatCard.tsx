@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
-import { Play, Pause, ShoppingCart, Music2, X, Youtube, Plus, Headphones, Radio, Layers, Crown, Check, ArrowRight } from 'lucide-react';
-import { Beat, License } from '../types';
+import React, { useState, useMemo } from 'react';
+import { Play, Pause, ShoppingCart, Music2, X, Youtube, Headphones, Radio, Layers, Crown, Check, Tag } from 'lucide-react';
+import { Beat, License, StorePromotion } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 import { useCart } from '../contexts/CartContext';
 
@@ -11,33 +11,45 @@ interface BeatCardProps {
 
 export const BeatCard: React.FC<BeatCardProps> = ({ beat }) => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
-  const { addToCart, toggleCart, cartCount } = useCart();
+  const { addToCart, toggleCart } = useCart();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
+
+  // Charger la promo si présente
+  const promo: StorePromotion | null = useMemo(() => {
+    const saved = localStorage.getItem('fabio_store_promo');
+    if (!saved) return null;
+    const p = JSON.parse(saved);
+    return p.isActive ? p : null;
+  }, []);
 
   const isCurrent = currentBeat?.id === beat.id;
   const isCurrentAndPlaying = isCurrent && isPlaying;
-  const lowestPrice = beat.licenses[0]?.price || 0;
+  
+  const originalLowestPrice = beat.licenses[0]?.price || 0;
+  const lowestPrice = promo 
+    ? Number((originalLowestPrice * (1 - promo.discountPercentage / 100)).toFixed(2))
+    : originalLowestPrice;
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Si on a cliqué sur le fond ou un élément non-bouton, on lance la musique
     playBeat(beat);
   };
 
   const toggleModal = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Indispensable pour ne pas relancer la musique en voulant acheter
+    e.stopPropagation();
     setShowLicenseModal(!showLicenseModal);
   };
 
   const handleAddToCart = (e: React.MouseEvent, license: License) => {
     e.stopPropagation();
-    addToCart(beat, license);
-    setShowLicenseModal(false);
-  };
+    
+    // Appliquer la réduction si promo active
+    const finalLicense = promo ? {
+      ...license,
+      price: Number((license.price * (1 - promo.discountPercentage / 100)).toFixed(2))
+    } : license;
 
-  const handleOpenCartFromModal = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    addToCart(beat, finalLicense);
     setShowLicenseModal(false);
-    toggleCart();
   };
 
   const getLicenseIcon = (type: string, size = "w-5 h-5") => {
@@ -73,6 +85,12 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat }) => {
                  )}
                </div>
           </div>
+
+          {promo && (
+            <div className="absolute top-2 left-2 bg-emerald-500 text-black text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
+              <Tag className="w-3 h-3" /> -{promo.discountPercentage}%
+            </div>
+          )}
           
           {isCurrentAndPlaying && (
               <div className="absolute bottom-0 left-0 right-0 h-1.5 flex items-end gap-0.5 justify-center pb-2 opacity-90">
@@ -103,8 +121,8 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat }) => {
             
             <div className="mt-3 flex items-center justify-between gap-2">
                <div className="flex flex-col">
-                  <span className="text-[9px] text-[#5c4a3e] uppercase font-black tracking-tighter">Dès</span>
-                  <span className="text-[#fff8f0] font-black text-sm">{lowestPrice}€</span>
+                  {promo && <span className="text-[8px] text-[#5c4a3e] line-through">{originalLowestPrice}€</span>}
+                  <span className={`${promo ? 'text-emerald-400' : 'text-[#fff8f0]'} font-black text-sm`}>{lowestPrice}€</span>
                </div>
                <button 
                   onClick={toggleModal}
@@ -118,7 +136,6 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat }) => {
         </div>
       </div>
 
-      {/* MODAL DE LICENCE (Inchangé mais on s'assure que les clics sont isolés) */}
       {showLicenseModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowLicenseModal(false)} />
@@ -138,25 +155,31 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat }) => {
             </div>
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 custom-scrollbar">
-              {beat.licenses.map((lic) => (
-                <div key={lic.id} className={`p-6 rounded-2xl border transition-all flex flex-col justify-between ${lic.fileType === 'EXCLUSIVE' ? 'bg-gradient-to-br from-[#2a1e16] to-[#1a120b] border-amber-600/30' : 'bg-[#120a05] border-[#3d2b1f]'}`}>
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 rounded-xl bg-amber-900/10 border border-amber-900/20">{getLicenseIcon(lic.fileType, "w-6 h-6")}</div>
-                      <h4 className="font-black text-white text-lg tracking-tight">{lic.name}</h4>
+              {beat.licenses.map((lic) => {
+                const discountedPrice = promo ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) : lic.price;
+                return (
+                  <div key={lic.id} className={`p-6 rounded-2xl border transition-all flex flex-col justify-between ${lic.fileType === 'EXCLUSIVE' ? 'bg-gradient-to-br from-[#2a1e16] to-[#1a120b] border-amber-600/30' : 'bg-[#120a05] border-[#3d2b1f]'}`}>
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-3 rounded-xl bg-amber-900/10 border border-amber-900/20">{getLicenseIcon(lic.fileType, "w-6 h-6")}</div>
+                        <h4 className="font-black text-white text-lg tracking-tight">{lic.name}</h4>
+                      </div>
+                      <div className="space-y-2 mb-8">
+                        {lic.features.map((feature, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-xs text-[#a89080]"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{feature}</span></div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-2 mb-8">
-                      {lic.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-start gap-2 text-xs text-[#a89080]"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /><span>{feature}</span></div>
-                      ))}
+                    <div className="pt-4 border-t border-[#3d2b1f] flex items-center justify-between">
+                      <div className="flex flex-col">
+                        {promo && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
+                        <span className={`text-2xl font-black ${promo ? 'text-emerald-400' : 'text-white'}`}>{discountedPrice}€</span>
+                      </div>
+                      <button onClick={(e) => handleAddToCart(e, lic)} className="px-6 py-3 rounded-xl font-black text-sm bg-white text-black hover:bg-amber-500 transition-all uppercase">Ajouter</button>
                     </div>
                   </div>
-                  <div className="pt-4 border-t border-[#3d2b1f] flex items-center justify-between">
-                    <span className="text-2xl font-black text-white">{lic.price}€</span>
-                    <button onClick={(e) => handleAddToCart(e, lic)} className="px-6 py-3 rounded-xl font-black text-sm bg-white text-black hover:bg-amber-500 transition-all uppercase">Ajouter</button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

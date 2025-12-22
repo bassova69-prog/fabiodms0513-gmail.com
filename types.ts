@@ -8,13 +8,22 @@ export interface License {
   streamsLimit: number | 'Unlimited';
 }
 
+export interface StorePromotion {
+  isActive: boolean;
+  discountPercentage: number;
+  message: string;
+}
+
 export interface Beat {
   id: string;
   title: string;
   bpm: number;
-  key: string;
+  key?: string;
   tags: string[];
-  audioUrl?: string;
+  audioUrl?: string; // Fallback / Preview
+  mp3Url?: string;   // Fichier MP3 final
+  wavUrl?: string;   // Fichier WAV final
+  stemsUrl?: string; // Dossier Stems (souvent ZIP)
   coverUrl: string;
   licenses: License[];
   youtubeId?: string;
