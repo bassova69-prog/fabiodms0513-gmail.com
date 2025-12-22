@@ -24,24 +24,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!audioRef.current) return;
     
     if (audioRef.current.paused) {
-        audioRef.current.play().catch(e => console.error("Playback failed", e));
+      audioRef.current.play().catch(e => console.error("Playback failed", e));
     } else {
-        audioRef.current.pause();
+      audioRef.current.pause();
     }
   }, []);
 
-  // Gestion robuste du raccourci Espace global
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Désactiver le comportement par défaut de l'espace (scroll)
       if (e.code === 'Space') {
-        const activeElement = document.activeElement as HTMLElement;
-        const isTyping = 
-          activeElement.tagName === 'INPUT' || 
-          activeElement.tagName === 'TEXTAREA' || 
-          activeElement.isContentEditable;
-
-        if (!isTyping) {
-          e.preventDefault(); // Bloque le scroll
+        const activeElement = document.activeElement;
+        const isInput = activeElement instanceof HTMLInputElement || 
+                        activeElement instanceof HTMLTextAreaElement || 
+                        (activeElement instanceof HTMLElement && activeElement.isContentEditable);
+        
+        if (!isInput) {
+          e.preventDefault();
           togglePlay();
         }
       }
@@ -62,25 +61,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     if (beat.audioUrl) {
-        const audio = new Audio(beat.audioUrl);
-        audioRef.current = audio;
-        
-        audio.addEventListener('timeupdate', () => {
-            if (audio.duration) {
-                setProgress((audio.currentTime / audio.duration) * 100);
-            }
-        });
+      const audio = new Audio(beat.audioUrl);
+      audioRef.current = audio;
+      
+      audio.addEventListener('timeupdate', () => {
+        if (audio.duration) {
+          setProgress((audio.currentTime / audio.duration) * 100);
+        }
+      });
 
-        audio.addEventListener('ended', () => {
-            setIsPlaying(false);
-            setProgress(0);
-        });
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setProgress(0);
+      });
 
-        audio.addEventListener('play', () => setIsPlaying(true));
-        audio.addEventListener('pause', () => setIsPlaying(false));
+      audio.addEventListener('play', () => setIsPlaying(true));
+      audio.addEventListener('pause', () => setIsPlaying(false));
 
-        audio.play().catch(e => console.error("Playback failed", e));
-        setCurrentBeat(beat);
+      audio.play().catch(e => console.error("Playback failed", e));
+      setCurrentBeat(beat);
     }
   }, [currentBeat, togglePlay]);
 

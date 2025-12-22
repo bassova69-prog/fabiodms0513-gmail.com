@@ -23,20 +23,20 @@ export const Home: React.FC = () => {
     <div className="flex flex-col gap-12 pb-24">
       
       {/* SECTION BANNIÈRE YOUTUBE STYLE */}
-      <section className="relative h-[450px] rounded-3xl overflow-hidden group border border-[#2a2a2a] shadow-2xl">
+      <section className="relative h-[500px] rounded-3xl overflow-hidden group border border-[#2a2a2a] shadow-2xl">
         <img 
           src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop" 
           alt="Studio Banner" 
-          className="absolute inset-0 w-full h-full object-cover opacity-40"
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-transparent to-transparent"></div>
         
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-           {/* MÉDAILLON CENTRAL FABIO */}
-           <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-amber-500 p-1 bg-[#0f0f0f] shadow-[0_0_50px_rgba(245,158,11,0.3)] mb-6 animate-in fade-in zoom-in-95 duration-700">
+           {/* MÉDAILLON CENTRAL FABIO - PHOTO OFFICIELLE GITHUB */}
+           <div className="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-amber-500 p-1 bg-[#0f0f0f] shadow-[0_0_60px_rgba(245,158,11,0.5)] mb-8 animate-in fade-in zoom-in-95 duration-700">
               <img 
                 src={PROFILE_IMAGE_URL} 
-                className="w-full h-full rounded-full object-cover shadow-inner" 
+                className="w-full h-full rounded-full object-cover" 
                 alt={ARTIST_NAME} 
               />
            </div>
@@ -48,15 +48,15 @@ export const Home: React.FC = () => {
                     </h1>
                     <CheckCircle2 className="w-6 h-6 text-blue-400 fill-current" />
                 </div>
-                <p className="text-amber-500 font-black uppercase tracking-[0.3em] text-xs md:text-sm mb-8">
+                <p className="text-amber-500 font-black uppercase tracking-[0.3em] text-xs md:text-sm mb-10">
                    <Zap className="w-4 h-4 inline mr-2" /> Platinum Producer • Afro Love & Kompa
                 </p>
 
                 <div className="flex flex-wrap justify-center gap-4">
-                  <button onClick={handlePlayFeatured} className="bg-white text-black font-black px-8 py-4 rounded-xl hover:bg-amber-500 transition-all flex items-center gap-3 uppercase text-sm">
+                  <button onClick={handlePlayFeatured} className="bg-white text-black font-black px-10 py-5 rounded-2xl hover:bg-amber-500 transition-all flex items-center gap-3 uppercase text-sm shadow-xl active:scale-95">
                       {isFeaturedPlaying ? 'EN LECTURE...' : <><Play className="w-5 h-5 fill-current" /> Dernier Beat</>}
                   </button>
-                  <Link to="/masterclass" className="bg-black/60 backdrop-blur-md text-white font-black px-8 py-4 rounded-xl hover:bg-[#2a2a2a] transition-all border border-[#2a2a2a] uppercase text-sm flex items-center gap-2">
+                  <Link to="/masterclass" className="bg-black/60 backdrop-blur-md text-white font-black px-10 py-5 rounded-2xl hover:bg-[#2a2a2a] transition-all border border-[#2a2a2a] uppercase text-sm flex items-center gap-2 active:scale-95">
                       <GraduationCap className="w-5 h-5" /> Masterclasses
                   </Link>
                 </div>

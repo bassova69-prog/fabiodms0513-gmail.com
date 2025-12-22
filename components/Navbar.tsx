@@ -12,13 +12,12 @@ export const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
   const { cartCount, toggleCart } = useCart();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f] flex items-center justify-between px-4 z-50 border-b border-[#2a2a2a]">
+    <nav className="fixed top-0 left-0 right-0 h-14 bg-[#0f0f0f]/95 backdrop-blur-md flex items-center justify-between px-4 z-50 border-b border-[#2a2a2a]">
       <div className="flex items-center gap-4">
         <button onClick={toggleSidebar} className="p-2 hover:bg-[#2a2a2a] rounded-full text-white transition-colors">
           <Menu className="w-6 h-6" />
         </button>
         
-        {/* LOGO PERSONNALISÉ AVEC LA PHOTO DE FABIO */}
         <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.location.href = '/'}>
           <div className="w-8 h-8 rounded-full border border-amber-500 overflow-hidden shadow-sm group-hover:scale-110 transition-transform duration-300">
             <img 
@@ -34,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
       </div>
 
       <div className="hidden md:flex flex-1 max-w-2xl mx-10">
-        <div className="flex w-full relative group">
+        <div className="flex w-full relative">
           <input 
             type="text" 
             placeholder="Rechercher un beat..." 
@@ -59,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
           <Bell className="w-6 h-6" />
         </button>
         
-        <div className="ml-2 w-8 h-8 rounded-full overflow-hidden border border-[#2a2a2a] cursor-pointer hover:opacity-80 transition-opacity">
+        <div className="ml-2 w-9 h-9 rounded-full overflow-hidden border-2 border-amber-500 cursor-pointer hover:scale-110 transition-transform shadow-lg shadow-amber-500/20">
           <img 
             src={PROFILE_IMAGE_URL} 
             alt="Fabio Profile" 
