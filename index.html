@@ -24,7 +24,6 @@
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       .animate-in { animation-duration: 300ms; animation-fill-mode: both; }
       .fade-in { animation-name: fadeIn; }
-      .text-stroke { -webkit-text-stroke: 1px rgba(255,255,255,0.2); color: transparent; }
     </style>
   <script type="importmap">
 {
@@ -35,13 +34,16 @@
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0"
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <!-- Vite gérera automatiquement la transformation de ce fichier -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

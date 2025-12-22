@@ -1,14 +1,13 @@
 
-import { Beat, Masterclass, FinancialData, LegalStatus, License, Transaction, ScheduleEvent } from './types';
+import { Beat, Masterclass, FinancialData, License, Transaction, ScheduleEvent } from './types';
 
 // Fabio's Context
 export const ARTIST_NAME = "Fabio DMS";
 export const CREDITS = ["Warren Saada", "Tayc", "Dadju", "Soolking"];
 export const LOCATION = "Paris/Créteil";
-// Utilisation du lien direct de la photo de Fabio (Profil Tatouage)
+// Ta photo officielle
 export const PROFILE_IMAGE_URL = "https://raw.githubusercontent.com/bassova69-prog/fabiodms0513-gmail.com/main/527337417_18517551331032986_3060701978807061030_n.jpg";
 
-// Seuils Micro-Entreprise 2025 (BNC - Prestations de services)
 export const MICRO_LIMITS = {
   TVA_BASE: 39100,
   TVA_MAX: 47500,
