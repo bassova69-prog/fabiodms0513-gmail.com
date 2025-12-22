@@ -1,0 +1,7 @@
+{
+  "name": "fabiodms",
+  "description": "Plateforme professionnelle pour Fabio : Vente de beats, Masterclass et Espace d'administration pour la gestion juridique et financière.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
