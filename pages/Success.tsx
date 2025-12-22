@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Download, CheckCircle2, Music, ShoppingBag, Share2, ArrowRight, Loader2, Info, FileAudio } from 'lucide-react';
+import { Download, CheckCircle2, Music, ShoppingBag, Share2, ArrowRight, Loader2, Info, FileAudio, Landmark } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { Transaction } from '../types';
 
 export const Success: React.FC = () => {
   const navigate = useNavigate();
@@ -10,9 +11,47 @@ export const Success: React.FC = () => {
   const { setIsCartOpen } = useCart();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [showDownloadTip, setShowDownloadTip] = useState(false);
+  const processedRef = useRef(false);
   
   // Récupération des articles achetés depuis l'état de navigation
   const purchasedItems = location.state?.items || [];
+
+  // ENREGISTREMENT AUTOMATIQUE DANS LA COMPTABILITÉ
+  useEffect(() => {
+    if (purchasedItems.length > 0 && !processedRef.current) {
+      const ACCOUNTING_STORAGE_KEY = 'fabio_pro_accounting_v1';
+      
+      try {
+        const savedTransactions = JSON.parse(localStorage.getItem(ACCOUNTING_STORAGE_KEY) || '[]');
+        
+        // Création des transactions pour chaque beat acheté
+        const newTransactions: Transaction[] = purchasedItems.map((item: any) => ({
+          id: `sale-${item.id}`, // Utilise l'ID unique de l'item du panier
+          date: new Date().toLocaleDateString('fr-FR'),
+          label: `Vente: ${item.beat.title} (${item.license.name})`,
+          customer: "Client Boutique Web",
+          category: 'VENTE',
+          amount: item.license.price,
+          type: 'IN',
+          status: 'PAYÉ'
+        }));
+
+        // Filtrer pour éviter les doublons si l'ID existe déjà (cas du refresh page)
+        const existingIds = new Set(savedTransactions.map((t: any) => t.id));
+        const filteredNew = newTransactions.filter(nt => !existingIds.has(nt.id));
+
+        if (filteredNew.length > 0) {
+          const updatedTransactions = [...filteredNew, ...savedTransactions];
+          localStorage.setItem(ACCOUNTING_STORAGE_KEY, JSON.stringify(updatedTransactions));
+          console.log(`${filteredNew.length} vente(s) enregistrée(s) dans le journal de caisse.`);
+        }
+        
+        processedRef.current = true;
+      } catch (e) {
+        console.error("Erreur lors de l'enregistrement comptable automatique:", e);
+      }
+    }
+  }, [purchasedItems]);
 
   const handleDownload = (audioUrl: string, title: string, fileType: string, id: string) => {
     if (!audioUrl) return;
@@ -20,13 +59,9 @@ export const Success: React.FC = () => {
     setDownloadingId(id);
     setShowDownloadTip(true);
 
-    // Extension basée sur la licence
     const extension = fileType === 'WAV' || fileType === 'TRACKOUT' ? 'wav' : 'mp3';
     const fileName = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_fabio_dms.${extension}`;
 
-    // Utilisation d'un lien invisible pour déclencher le téléchargement
-    // Note: 'download' attribut ne fonctionne que sur le même domaine, 
-    // mais target="_blank" permet d'ouvrir le fichier dans un nouvel onglet sans quitter la page actuelle
     const link = document.createElement('a');
     link.href = audioUrl;
     link.target = '_blank';
@@ -37,7 +72,6 @@ export const Success: React.FC = () => {
     link.click();
     document.body.removeChild(link);
 
-    // Feedback visuel temporaire
     setTimeout(() => {
       setDownloadingId(null);
     }, 2000);
@@ -45,7 +79,6 @@ export const Success: React.FC = () => {
 
   const handleBackToCart = () => {
     navigate('/beats');
-    // On attend un peu que la navigation soit effectuée
     setTimeout(() => {
       setIsCartOpen(true);
     }, 200);
@@ -54,7 +87,6 @@ export const Success: React.FC = () => {
   return (
     <div className="min-h-[85vh] flex flex-col items-center justify-center p-4 md:p-10 animate-in fade-in zoom-in-95 duration-500">
       <div className="max-w-3xl w-full bg-[#1a120b] border border-[#3d2b1f] rounded-[3rem] p-8 md:p-14 shadow-2xl relative overflow-hidden">
-        {/* Effet visuel d'arrière-plan */}
         <div className="absolute -top-20 -right-20 w-64 h-64 bg-amber-500/10 blur-[100px] rounded-full"></div>
         <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-500/10 blur-[100px] rounded-full"></div>
         
@@ -67,8 +99,12 @@ export const Success: React.FC = () => {
             PAIEMENT <span className="text-amber-500 text-stroke">REUSSI</span>
           </h1>
           <p className="text-[#a89080] text-lg mb-8 max-w-lg font-medium">
-            Félicitations Fabio ! Tes licences sont prêtes. Tes fichiers seront téléchargés au format demandé.
+            Félicitations Fabio ! Tes licences sont prêtes. Les ventes ont été ajoutées automatiquement à ton <span className="text-white border-b border-amber-500/30">journal de caisse</span>.
           </p>
+
+          <div className="mb-8 flex items-center gap-2 bg-emerald-950/20 text-emerald-400 px-4 py-2 rounded-full border border-emerald-900/30 text-[10px] font-black uppercase tracking-widest animate-pulse">
+            <Landmark className="w-3 h-3" /> Comptabilité à jour
+          </div>
 
           {showDownloadTip && (
             <div className="mb-8 p-4 bg-amber-900/10 border border-amber-900/30 rounded-2xl flex items-start gap-3 text-left animate-in slide-in-from-top-2">
@@ -79,7 +115,6 @@ export const Success: React.FC = () => {
             </div>
           )}
 
-          {/* LISTE DES TÉLÉCHARGEMENTS */}
           <div className="w-full space-y-4 mb-12">
             <h2 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] mb-4 text-left border-b border-[#3d2b1f] pb-2">Tes Fichiers (MP3 / WAV)</h2>
             {purchasedItems.length > 0 ? (
@@ -121,7 +156,6 @@ export const Success: React.FC = () => {
             )}
           </div>
 
-          {/* ACTIONS PRINCIPALES */}
           <div className="flex flex-col sm:flex-row gap-4 w-full">
             <button 
               onClick={handleBackToCart}
