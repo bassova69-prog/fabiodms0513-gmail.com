@@ -31,7 +31,10 @@ const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAd
 };
 
 const App: React.FC = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // Par défaut, fermée sur mobile, ouverte sur desktop
+    return window.innerWidth >= 768;
+  });
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(() => {
     return localStorage.getItem('fabio_admin_mode') === 'true';
@@ -52,6 +55,10 @@ const App: React.FC = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
   return (
     <PlayerProvider>
       <CartProvider>
@@ -65,9 +72,10 @@ const App: React.FC = () => {
                 isAdmin={isAdmin} 
                 onLoginClick={() => setIsLoginModalOpen(true)}
                 onLogoutClick={handleLogout}
+                onClose={closeSidebar}
               />
               
-              <main className={`flex-1 p-6 overflow-x-hidden transition-all duration-300 ${isSidebarOpen ? 'md:ml-60' : 'ml-0'}`}>
+              <main className={`flex-1 p-4 md:p-6 overflow-x-hidden transition-all duration-300 ${isSidebarOpen ? 'md:ml-60' : 'ml-0'}`}>
                 <div className="max-w-7xl mx-auto">
                   <Routes>
                     {/* Routes Publiques */}
