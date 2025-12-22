@@ -21,9 +21,11 @@
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      .animate-in { animation-duration: 300ms; animation-fill-mode: both; }
-      .fade-in { animation-name: fadeIn; }
+      
+      .text-stroke {
+        -webkit-text-stroke: 1px rgba(255,255,255,0.1);
+        color: transparent;
+      }
     </style>
   <script type="importmap">
 {
@@ -43,7 +45,6 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- Vite gérera automatiquement la transformation de ce fichier -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

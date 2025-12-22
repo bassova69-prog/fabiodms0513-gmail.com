@@ -32,7 +32,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Désactiver le comportement par défaut de l'espace (scroll)
       if (e.code === 'Space') {
         const activeElement = document.activeElement;
         const isInput = activeElement instanceof HTMLInputElement || 
@@ -40,7 +39,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         (activeElement instanceof HTMLElement && activeElement.isContentEditable);
         
         if (!isInput) {
-          e.preventDefault();
+          e.preventDefault(); // Empêche le défilement de la page
           togglePlay();
         }
       }
@@ -58,6 +57,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current = null;
     }
 
     if (beat.audioUrl) {
