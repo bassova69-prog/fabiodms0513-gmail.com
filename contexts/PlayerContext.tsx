@@ -20,6 +20,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Gestion du raccourci Espace global
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ne pas déclencher si l'utilisateur tape dans un input, textarea ou contentEditable
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault(); // Empêche le scroll de la page
+        togglePlay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentBeat, isPlaying]); // Dépendances pour avoir l'état frais dans togglePlay
+
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -30,21 +53,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const playBeat = (beat: Beat) => {
-    // If clicking the same beat
+    // Si on clique sur le même beat
     if (currentBeat?.id === beat.id) {
-      if (audioRef.current) {
-        if (audioRef.current.paused) {
-            audioRef.current.play();
-            setIsPlaying(true);
-        } else {
-            audioRef.current.pause();
-            setIsPlaying(false);
-        }
-      }
+      togglePlay();
       return;
     }
 
-    // New beat
+    // Nouveau beat
     if (audioRef.current) {
       audioRef.current.pause();
     }
@@ -81,10 +96,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const togglePlay = () => {
     if (!currentBeat || !audioRef.current) return;
-    if (isPlaying) {
-        audioRef.current.pause();
+    if (audioRef.current.paused) {
+        audioRef.current.play().catch(e => console.error("Playback resume failed", e));
     } else {
-        audioRef.current.play();
+        audioRef.current.pause();
     }
   };
 

@@ -25,22 +25,25 @@ export const BottomPlayer: React.FC = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-20 bg-[#1a120b] border-t border-[#3d2b1f] z-50 flex items-center px-4 md:px-8 shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
-      {/* Interactive Progress Bar Container */}
+      {/* Interactive Progress Bar Container with larger hit area */}
       <div 
         ref={progressBarRef}
-        className="absolute top-0 left-0 right-0 h-1.5 bg-[#2a1e16] cursor-pointer group z-50"
+        className="absolute -top-3 left-0 right-0 h-6 cursor-pointer group z-50 flex items-center"
         onClick={handleProgressClick}
       >
-        {/* Fill */}
-        <div 
-          className="absolute top-0 left-0 h-full bg-amber-500 transition-all duration-100 ease-linear shadow-[0_0_10px_#f59e0b]"
-          style={{ width: `${progress}%` }}
-        />
-        {/* Handle (Visible on hover) */}
-        <div 
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-          style={{ left: `${progress}%`, marginLeft: '-6px' }}
-        />
+        {/* Visual Background Bar */}
+        <div className="w-full h-1.5 bg-[#2a1e16] relative">
+            {/* Fill */}
+            <div 
+              className="absolute top-0 left-0 h-full bg-amber-500 transition-all duration-100 ease-linear shadow-[0_0_10px_#f59e0b]"
+              style={{ width: `${progress}%` }}
+            />
+            {/* Handle (Visible on hover or active) */}
+            <div 
+              className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+              style={{ left: `${progress}%`, marginLeft: '-7px' }}
+            />
+        </div>
       </div>
       
       <div className="flex items-center w-full max-w-7xl mx-auto gap-4 md:gap-8 pt-1">
