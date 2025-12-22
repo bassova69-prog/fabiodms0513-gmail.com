@@ -1,15 +1,18 @@
 
-import { Beat, Masterclass, FinancialData, License, Transaction, ScheduleEvent } from './types';
+import { Beat, Masterclass, FinancialData, LegalStatus, License, Transaction, ScheduleEvent } from './types';
 
+// Fabio's Context
 export const ARTIST_NAME = "Fabio DMS";
 export const CREDITS = ["Warren Saada", "Tayc", "Dadju", "Soolking"];
 export const LOCATION = "Paris/Créteil";
+// Utilisation du lien direct de la photo de Fabio
 export const PROFILE_IMAGE_URL = "https://raw.githubusercontent.com/bassova69-prog/fabiodms0513-gmail.com/main/527337417_18517551331032986_3060701978807061030_n.jpg";
 
+// Seuils Micro-Entreprise 2025 (BNC - Prestations de services)
 export const MICRO_LIMITS = {
-  TVA_BASE: 39100,
-  TVA_MAX: 47500,
-  CA_MAX: 77700
+  TVA_BASE: 39100, // Seuil de franchise (ne pas facturer de TVA)
+  TVA_MAX: 47500,  // Seuil majoré (bascule immédiate vers la TVA)
+  CA_MAX: 77700    // Seuil limite du statut auto-entrepreneur
 };
 
 export const STANDARD_LICENSES: License[] = [
@@ -19,6 +22,7 @@ export const STANDARD_LICENSES: License[] = [
   { id: 'exclusive', name: 'Exclusive Rights', price: 499.99, fileType: 'EXCLUSIVE', features: ['Full Ownership', 'Publishing 50/50'], streamsLimit: 'Unlimited' }
 ];
 
+// Catalogue pré-rempli pour Fabio
 export const FEATURED_BEATS: Beat[] = [
   {
     id: 'demo-1',
@@ -41,6 +45,16 @@ export const FEATURED_BEATS: Beat[] = [
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
     licenses: STANDARD_LICENSES,
     youtubeId: 'dQw4w9WgXcQ'
+  },
+  {
+    id: 'demo-3',
+    title: 'DOUCEUR | Kizomba Vibe',
+    bpm: 88,
+    key: 'A Minor',
+    tags: ['Kizomba', 'Smooth', 'Chill'],
+    coverUrl: 'https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=500&auto=format&fit=crop&q=60',
+    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+    licenses: STANDARD_LICENSES
   }
 ];
 
@@ -48,26 +62,69 @@ export const MASTERCLASSES: Masterclass[] = [
   { 
     id: 'mc1', 
     title: "Secrets de Production Afro-Love", 
-    description: "Apprends à composer des mélodies pour Tayc & Dadju.", 
+    description: "Apprends à composer des mélodies pour Tayc & Dadju. Mixage et sound design complet.", 
     price: 97, 
     duration: "4h 30m", 
     level: "Intermédiaire", 
     thumbnailUrl: "https://images.unsplash.com/photo-1598653222000-6b7b7a552625?w=500&auto=format&fit=crop&q=60" 
+  },
+  { 
+    id: 'mc2', 
+    title: "Rythmiques Kompa Modernes", 
+    description: "Le secret du groove Kompa/Zouk actuel. Percussions et lignes de basse.", 
+    price: 75, 
+    duration: "3h 15m", 
+    level: "Débutant", 
+    thumbnailUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=60" 
   }
 ];
 
+// Financial Projection Spécial Micro (ACRE + BNC)
 export const generateFinancialProjection = (): FinancialData[] => {
   const data: FinancialData[] = [];
+  const startYear = 2025;
+  const startMonth = 12;
+
   for (let i = 0; i < 36; i++) {
+    const currentMonthIndex = startMonth + i - 1;
+    const year = startYear + Math.floor(currentMonthIndex / 12);
+    const month = (currentMonthIndex % 12) + 1;
+    const monthLabel = `${month < 10 ? '0' + month : month}/${year}`;
+    
+    const baseBeatSales = 800 + (i * 100); 
+    let totalRevenue = baseBeatSales;
+    if (i < 12) totalRevenue += 1350;
+
+    let urssafRate = 0.232; 
+    if (i === 0) urssafRate = 0.123;
+    else if (i < 12) urssafRate = 0.131;
+    
+    const taxRate = 0.022;
+    const socialCharges = baseBeatSales * urssafRate;
+    const incomeTax = baseBeatSales * taxRate;
+    const fixedExpenses = 60;
+
+    const totalOut = socialCharges + incomeTax + fixedExpenses;
+
     data.push({
-      month: `${(i % 12) + 1}/2025`,
-      income: 1500 + (i * 100),
-      expenses: 300,
-      net: 1200 + (i * 100)
+      month: monthLabel,
+      income: totalRevenue,
+      expenses: totalOut,
+      net: totalRevenue - totalOut
     });
   }
   return data;
 };
 
-export const MOCK_TRANSACTIONS: Transaction[] = [];
-export const MOCK_EVENTS: ScheduleEvent[] = [];
+export const MOCK_TRANSACTIONS: Transaction[] = [
+  { id: 't1', date: '06/12/2025', label: 'Virement Pôle Emploi (ARE)', customer: 'France Travail', category: 'AIDE', amount: 1350, type: 'IN', status: 'PAYÉ' },
+  { id: 't2', date: '08/12/2025', label: 'Vente Beat - AMOUR (Lease)', customer: 'Jean Dupont', category: 'VENTE', amount: 29.99, type: 'IN', status: 'PAYÉ' },
+  { id: 't3', date: '10/12/2025', label: 'Masterclass Afro-Love', customer: 'Studio 24', category: 'VENTE', amount: 97, type: 'IN', status: 'PAYÉ' },
+  { id: 't5', date: '06/12/2025', label: 'Abonnement BeatStars', customer: 'BeatStars Inc.', category: 'SERVICE', amount: 19.99, type: 'OUT', status: 'PAYÉ' },
+  { id: 't6', date: '15/12/2025', label: 'Vente Exclu - PRINCE', customer: 'Label Rec', category: 'VENTE', amount: 499.99, type: 'IN', status: 'PAYÉ' },
+];
+
+export const MOCK_EVENTS: ScheduleEvent[] = [
+  { id: 'e1', title: 'Lancement Micro-Entreprise 🚀', date: '2025-12-06', time: '09:00', type: 'ADMIN', status: 'DONE', notes: 'Début ACRE' },
+  { id: 'e4', title: 'Déclaration URSSAF Mensuelle', date: '2026-01-31', time: '09:00', type: 'ADMIN', status: 'PENDING', notes: 'Déclarer le CA de Décembre' },
+];
