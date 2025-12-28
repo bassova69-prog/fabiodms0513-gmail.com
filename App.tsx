@@ -22,8 +22,8 @@ import { CartProvider } from './contexts/CartContext';
 import { CartDrawer } from './components/CartDrawer';
 import { AdminLoginModal } from './components/AdminLoginModal';
 
-// Composant pour protéger les routes Admin
-const ProtectedRoute = ({ children, isAdmin }: { children: React.ReactNode, isAdmin: boolean }) => {
+// Fix: Use React.PropsWithChildren to ensure children are recognized correctly by TypeScript in element prop
+const ProtectedRoute = ({ children, isAdmin }: React.PropsWithChildren<{ isAdmin: boolean }>) => {
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
@@ -36,7 +36,9 @@ const App: React.FC = () => {
     return window.innerWidth >= 768;
   });
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(() => {
+  
+  // Fix: Explicitly type the isAdmin state to prevent inference issues
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
     return localStorage.getItem('fabio_admin_mode') === 'true';
   });
 
