@@ -1,18 +1,15 @@
 
 import React from 'react';
-import { Home, Music, GraduationCap, Briefcase, Lock, Unlock, UploadCloud, FileDigit, ShieldAlert, X } from 'lucide-react';
+import { Home, Music, GraduationCap, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PROFILE_IMAGE_URL, ARTIST_NAME } from '../constants';
 
 interface SidebarProps {
   isOpen: boolean;
-  isAdmin: boolean;
-  onLoginClick: () => void;
-  onLogoutClick: () => void;
   onClose: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isAdmin, onLoginClick, onLogoutClick, onClose }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,12 +17,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isAdmin, onLoginClick,
     { icon: Home, label: 'Accueil Studio', path: '/' },
     { icon: Music, label: 'Boutique de Beats', path: '/beats' },
     { icon: GraduationCap, label: 'Masterclass', path: '/masterclass' },
-  ];
-
-  const adminItems = [
-    { icon: Briefcase, label: 'Tableau de Bord', path: '/admin' },
-    { icon: UploadCloud, label: 'Upload Beat', path: '/admin/upload' },
-    { icon: FileDigit, label: 'Scanner Factures', path: '/admin/invoices' },
   ];
 
   const handleNavigation = (path: string) => {
@@ -87,46 +78,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, isAdmin, onLoginClick,
                 <span className="text-sm">{item.label}</span>
               </button>
           ))}
-
-          {isAdmin && (
-              <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
-                  <div className="flex items-center gap-2 mb-2 px-3">
-                      <ShieldAlert className="w-3 h-3 text-red-500" />
-                      <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest">Administration</h3>
-                  </div>
-                  {adminItems.map((item, index) => (
-                      <button
-                      key={index}
-                      onClick={() => handleNavigation(item.path)}
-                      className={`w-full flex items-center px-3 py-2.5 rounded-xl gap-5 transition-all duration-200 group mb-1 ${
-                          location.pathname === item.path 
-                          ? 'bg-red-950/20 text-white font-bold' 
-                          : 'text-[#f1f1f1] hover:bg-[#2a2a2a]'
-                      }`}
-                      >
-                      <item.icon className={`w-5 h-5 ${location.pathname === item.path ? 'text-red-500' : 'text-[#f1f1f1]'}`} />
-                      <span className="text-sm">{item.label}</span>
-                      </button>
-                  ))}
-              </div>
-          )}
         </div>
-
-        <div className="p-4 mt-auto">
-          <button 
-            onClick={() => {
-              if (isAdmin) onLogoutClick(); else onLoginClick();
-              if (window.innerWidth < 768) onClose();
-            }}
-            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-xs font-bold uppercase ${
-              isAdmin 
-              ? 'bg-red-600 text-white border-red-500 shadow-lg shadow-red-900/20' 
-              : 'bg-[#1a120b] text-[#8c7a6b] border-[#2a2a2a] hover:text-white hover:border-white'
-            }`}
-          >
-            {isAdmin ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            {isAdmin ? 'Quitter Admin' : 'Admin'}
-          </button>
+        
+        <div className="p-4 mt-auto text-center">
+            <p className="text-[10px] text-[#5c4a3e] italic">
+                © 2025 Fabio DMS.<br/>Tous droits réservés.
+            </p>
         </div>
       </aside>
     </>
