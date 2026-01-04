@@ -27,20 +27,22 @@ export const BeatStore: React.FC = () => {
       setFilteredBeats(allBeats);
       
       // --- NOUVEAU : INTERCEPTION DE LA PROMO VIA L'URL ---
-      // On regarde si l'URL contient des instructions de promo (ex: ?promo=OFFRE&bg=orange)
       const params = new URLSearchParams(window.location.hash.split('?')[1]);
       const urlPromoMessage = params.get('promo');
       const urlPromoBG = params.get('bg');
+      const urlPct = params.get('pct'); // Nouveau : le % choisi
+      const urlIds = params.get('ids'); // Nouveau : les IDs des beats sélectionnés
 
       if (urlPromoMessage) {
         setPromo({
           isActive: true,
-          discountPercentage: 20, 
           message: decodeURIComponent(urlPromoMessage),
-          // Si bg=orange, on utilise BULK_DEAL pour changer la couleur du bandeau
-          type: urlPromoBG === 'orange' ? 'BULK_DEAL' : 'PERCENTAGE',
-          scope: 'GLOBAL',
-          targetBeatIds: []
+          discountPercentage: urlPct ? parseInt(urlPct) : 20,
+          // On détermine le type selon le message ou le paramètre bg
+          type: (urlPromoBG === 'orange' || urlPromoMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
+          // Si urlIds existe, la promo est ciblée (SPECIFIC), sinon elle est globale
+          scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
+          targetBeatIds: urlIds ? urlIds.split(',') : []
         });
         return; // On arrête ici, l'URL est prioritaire sur tout le reste
       }
@@ -101,15 +103,35 @@ export const BeatStore: React.FC = () => {
     setSelectedBeatForPurchase(null);
   };
 
+  // Helper pour vérifier si la promo s'applique à un beat donné
+  const isPromoValidForBeat = (beatId: string) => {
+    if (!promo || !promo.isActive) return false;
+    if (promo.scope === 'GLOBAL') return true;
+    if (promo.scope === 'SPECIFIC' && promo.targetBeatIds?.includes(beatId)) return true;
+    return false;
+  };
+
   const handleAddToCart = (e: React.MouseEvent, beat: Beat, license: License) => {
     e.stopPropagation();
     
-    // Appliquer la réduction si promo active
-    const finalLicense = promo && promo.isActive ? {
-      ...license,
-      price: Number((license.price * (1 - promo.discountPercentage / 100)).toFixed(2))
-    } : license;
+    let finalPrice = license.price;
 
+    // Calcul dynamique de la réduction
+    if (promo && promo.isActive) {
+      const isGlobal = promo.scope === 'GLOBAL';
+      const isTargeted = promo.scope === 'SPECIFIC' && (promo.targetBeatIds?.includes(beat.id) ?? false);
+
+      if (isGlobal || isTargeted) {
+        // Si c'est "2 achetés 1 offert", on ne change pas le prix unitaire ici 
+        // (ça se gère souvent au total du panier), 
+        // mais s'il s'agit d'un pourcentage :
+        if (promo.type === 'PERCENTAGE' || isTargeted) {
+          finalPrice = Number((license.price * (1 - promo.discountPercentage / 100)).toFixed(2));
+        }
+      }
+    }
+
+    const finalLicense = { ...license, price: finalPrice };
     addToCart(beat, finalLicense);
     closePurchaseModal();
   };
@@ -146,7 +168,7 @@ export const BeatStore: React.FC = () => {
                 <div className={`hidden sm:flex items-center gap-2 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-lg z-10 shrink-0 ${
                     promo.type === 'BULK_DEAL' ? 'bg-orange-600' : 'bg-red-600'
                 }`}>
-                    <Tag className="w-3 h-3" /> Remise Active
+                    <Tag className="w-3 h-3" /> {promo.scope === 'SPECIFIC' ? 'Offre Ciblée' : 'Remise Active'}
                 </div>
             </div>
         </div>
@@ -195,8 +217,12 @@ export const BeatStore: React.FC = () => {
           {filteredBeats.length > 0 ? (
             filteredBeats.map((beat) => (
               <div key={beat.id} className="h-full">
-                {/* On passe la promo fetchée à la carte pour l'affichage du prix barré */}
-                <BeatCard beat={beat} promo={promo} onPurchase={handlePurchaseClick} />
+                {/* On passe la promo fetchée à la carte SEULEMENT si elle s'applique à ce beat */}
+                <BeatCard 
+                    beat={beat} 
+                    promo={isPromoValidForBeat(beat.id) ? promo : null} 
+                    onPurchase={handlePurchaseClick} 
+                />
               </div>
             ))
           ) : (
@@ -229,7 +255,11 @@ export const BeatStore: React.FC = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 custom-scrollbar bg-[#0f0f0f]">
               {selectedBeatForPurchase.licenses.map((lic) => {
-                const discountedPrice = promo && promo.isActive ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) : lic.price;
+                const isValid = isPromoValidForBeat(selectedBeatForPurchase.id);
+                const discountedPrice = isValid && promo 
+                    ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) 
+                    : lic.price;
+                
                 const isExclusive = lic.fileType === 'EXCLUSIVE';
                 
                 return (
@@ -258,8 +288,8 @@ export const BeatStore: React.FC = () => {
                     </div>
                     <div className="pt-4 border-t border-dashed border-[#3d2b1f] flex items-center justify-between mt-auto">
                       <div className="flex flex-col">
-                        {promo && promo.isActive && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
-                        <span className={`text-2xl font-black ${promo && promo.isActive ? 'text-emerald-400' : 'text-white'}`}>{discountedPrice}€</span>
+                        {isValid && promo && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
+                        <span className={`text-2xl font-black ${isValid && promo ? 'text-emerald-400' : 'text-white'}`}>{discountedPrice}€</span>
                       </div>
                       <button className={`px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${isExclusive ? 'bg-amber-500 text-black hover:bg-white' : 'bg-[#2a1e16] text-white hover:bg-white hover:text-black'}`}>
                         Ajouter
