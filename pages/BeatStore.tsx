@@ -26,7 +26,26 @@ export const BeatStore: React.FC = () => {
       setBeats(allBeats);
       setFilteredBeats(allBeats);
       
-      // 1. Tenter de récupérer la promo depuis le site d'administration distant
+      // --- NOUVEAU : INTERCEPTION DE LA PROMO VIA L'URL ---
+      // On regarde si l'URL contient des instructions de promo (ex: ?promo=OFFRE&bg=orange)
+      const params = new URLSearchParams(window.location.hash.split('?')[1]);
+      const urlPromoMessage = params.get('promo');
+      const urlPromoBG = params.get('bg');
+
+      if (urlPromoMessage) {
+        setPromo({
+          isActive: true,
+          discountPercentage: 20, 
+          message: decodeURIComponent(urlPromoMessage),
+          // Si bg=orange, on utilise BULK_DEAL pour changer la couleur du bandeau
+          type: urlPromoBG === 'orange' ? 'BULK_DEAL' : 'PERCENTAGE',
+          scope: 'GLOBAL',
+          targetBeatIds: []
+        });
+        return; // On arrête ici, l'URL est prioritaire sur tout le reste
+      }
+
+      // --- LOGIQUE EXISTANTE (RESTE INCHANGÉE) ---
       try {
         const response = await fetch('https://gestion-fabio.vercel.app/promo.json');
         if (response.ok) {
@@ -109,14 +128,24 @@ export const BeatStore: React.FC = () => {
     <div className="pb-28 relative">
       {/* BANDEAU PROMO SI ACTIF */}
       {promo && promo.isActive && !selectedBeatForPurchase && (
-        <div className="mb-6 bg-gradient-to-r from-red-600 to-amber-600 p-0.5 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.2)] animate-in slide-in-from-top-4 mx-2 mt-4 relative z-0">
+        <div className={`mb-6 p-0.5 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.2)] animate-in slide-in-from-top-4 mx-2 mt-4 relative z-0 ${
+            promo.type === 'BULK_DEAL' 
+            ? 'bg-gradient-to-r from-orange-500 to-amber-500' 
+            : 'bg-gradient-to-r from-red-600 to-amber-600'
+        }`}>
             <div className="bg-[#120a05] rounded-[14px] p-4 flex items-center justify-center gap-4 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-600/10 to-amber-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                    promo.type === 'BULK_DEAL'
+                    ? 'bg-gradient-to-r from-orange-500/10 to-amber-500/10'
+                    : 'bg-gradient-to-r from-red-600/10 to-amber-600/10'
+                }`}></div>
                 <Zap className="w-5 h-5 text-amber-500 animate-pulse shrink-0" />
                 <p className="text-white font-black uppercase tracking-tighter text-sm md:text-base italic text-center z-10">
                     {promo.message}
                 </p>
-                <div className="hidden sm:flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-lg z-10 shrink-0">
+                <div className={`hidden sm:flex items-center gap-2 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-lg z-10 shrink-0 ${
+                    promo.type === 'BULK_DEAL' ? 'bg-orange-600' : 'bg-red-600'
+                }`}>
                     <Tag className="w-3 h-3" /> Remise Active
                 </div>
             </div>

@@ -12,6 +12,9 @@ export interface StorePromotion {
   isActive: boolean;
   discountPercentage: number;
   message: string;
+  type?: 'PERCENTAGE' | 'BULK_DEAL';
+  scope?: 'GLOBAL' | 'SPECIFIC';
+  targetBeatIds?: string[];
 }
 
 export interface Beat {
