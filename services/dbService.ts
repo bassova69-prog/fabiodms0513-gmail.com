@@ -17,6 +17,11 @@ export const saveBeat = async (beat: Beat): Promise<void> => {
       body: JSON.stringify(beat),
     });
 
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") === -1) {
+       throw new Error("L'API a renvoyé une réponse non-JSON (HTML). Vérifiez la configuration vercel.json.");
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || 'Erreur lors de la sauvegarde sur le serveur');
@@ -30,6 +35,13 @@ export const saveBeat = async (beat: Beat): Promise<void> => {
 export const getAllBeats = async (): Promise<Beat[]> => {
   try {
     const response = await fetch('/api/beats');
+    
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") === -1) {
+       console.error("L'API a renvoyé du HTML au lieu du JSON. Vérifiez la configuration des rewrites Vercel.");
+       // Retourne un tableau vide pour ne pas faire planter l'interface
+       return [];
+    }
     
     if (!response.ok) {
       throw new Error('Impossible de récupérer les beats depuis le serveur');
