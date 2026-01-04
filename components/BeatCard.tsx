@@ -1,30 +1,24 @@
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Play, ShoppingCart, Youtube, Tag, BarChart3 } from 'lucide-react';
 import { Beat, StorePromotion } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 
 interface BeatCardProps {
   beat: Beat;
+  promo?: StorePromotion | null;
   onPurchase: (beat: Beat) => void;
 }
 
-export const BeatCard: React.FC<BeatCardProps> = ({ beat, onPurchase }) => {
+export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
-
-  // Charger la promo si présente (pour l'affichage du prix sur la carte)
-  const promo: StorePromotion | null = useMemo(() => {
-    const saved = localStorage.getItem('fabio_store_promo');
-    if (!saved) return null;
-    const p = JSON.parse(saved);
-    return p.isActive ? p : null;
-  }, []);
 
   const isCurrent = currentBeat?.id === beat.id;
   const isCurrentAndPlaying = isCurrent && isPlaying;
   
   const originalLowestPrice = beat.licenses[0]?.price || 0;
-  const lowestPrice = promo 
+  // Calcul du prix remisé basé sur la prop 'promo' passée par le parent (Store ou Home)
+  const lowestPrice = promo && promo.isActive
     ? Number((originalLowestPrice * (1 - promo.discountPercentage / 100)).toFixed(2))
     : originalLowestPrice;
 
@@ -69,9 +63,9 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, onPurchase }) => {
 
         {/* Badges Compact */}
         <div className="absolute top-2 left-2 flex gap-1">
-          {promo && (
+          {promo && promo.isActive && (
               <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
-              <Tag className="w-2.5 h-2.5 fill-current" /> PROMO
+              <Tag className="w-2.5 h-2.5 fill-current" /> PROMO -{promo.discountPercentage}%
               </div>
           )}
           {beat.bpm && (
@@ -114,8 +108,8 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, onPurchase }) => {
              <div className="flex flex-col">
                 <span className="text-[8px] text-[#5c4a3e] uppercase font-bold tracking-wider">À partir de</span>
                 <div className="flex items-baseline gap-1.5">
-                    <span className={`font-black text-base ${promo ? 'text-emerald-400' : 'text-white'}`}>{lowestPrice}€</span>
-                    {promo && <span className="text-[9px] text-[#5c4a3e] line-through decoration-red-500/50">{originalLowestPrice}€</span>}
+                    <span className={`font-black text-base ${promo && promo.isActive ? 'text-emerald-400' : 'text-white'}`}>{lowestPrice}€</span>
+                    {promo && promo.isActive && <span className="text-[9px] text-[#5c4a3e] line-through decoration-red-500/50">{originalLowestPrice}€</span>}
                 </div>
              </div>
              

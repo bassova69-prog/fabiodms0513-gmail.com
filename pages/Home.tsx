@@ -122,7 +122,11 @@ export const Home: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {FEATURED_BEATS.slice(0, 4).map(beat => (
-            <BeatCard key={beat.id} beat={beat} />
+            <BeatCard 
+              key={beat.id} 
+              beat={beat} 
+              onPurchase={() => navigate('/beats')} 
+            />
           ))}
         </div>
       </section>

@@ -26,12 +26,27 @@ export const BeatStore: React.FC = () => {
       setBeats(allBeats);
       setFilteredBeats(allBeats);
       
+      // 1. Tenter de récupérer la promo depuis le site d'administration distant
+      try {
+        const response = await fetch('https://gestion-fabio.vercel.app/promo.json');
+        if (response.ok) {
+           const remotePromo = await response.json();
+           if (remotePromo && typeof remotePromo.isActive === 'boolean') {
+             setPromo(remotePromo);
+             return; // Si succès, on arrête là
+           }
+        }
+      } catch (err) {
+        console.log("Impossible de récupérer la promo distante, fallback local.");
+      }
+
+      // 2. Fallback Local Storage (si dev local)
       const savedPromo = localStorage.getItem('fabio_store_promo');
       if (savedPromo) {
         const p = JSON.parse(savedPromo);
         if (p.isActive) setPromo(p);
       } else {
-        // Fallback: Si aucune config locale, on affiche la promo par défaut (simule l'activation depuis le projet Admin)
+        // 3. Fallback par défaut (Si aucune connexion)
         setPromo({
           isActive: true,
           discountPercentage: 20,
@@ -39,15 +54,9 @@ export const BeatStore: React.FC = () => {
         });
       }
     } catch (e) {
-      console.error("Error loading beats from storage:", e);
+      console.error("Error loading data:", e);
       setBeats(FEATURED_BEATS);
       setFilteredBeats(FEATURED_BEATS);
-      // Fallback en cas d'erreur
-      setPromo({
-        isActive: true,
-        discountPercentage: 20,
-        message: "OFFRE LIMITÉE : -20% SUR TOUT LE CATALOGUE !"
-      });
     }
   };
 
@@ -77,7 +86,7 @@ export const BeatStore: React.FC = () => {
     e.stopPropagation();
     
     // Appliquer la réduction si promo active
-    const finalLicense = promo ? {
+    const finalLicense = promo && promo.isActive ? {
       ...license,
       price: Number((license.price * (1 - promo.discountPercentage / 100)).toFixed(2))
     } : license;
@@ -99,7 +108,7 @@ export const BeatStore: React.FC = () => {
   return (
     <div className="pb-28 relative">
       {/* BANDEAU PROMO SI ACTIF */}
-      {promo && !selectedBeatForPurchase && (
+      {promo && promo.isActive && !selectedBeatForPurchase && (
         <div className="mb-6 bg-gradient-to-r from-red-600 to-amber-600 p-0.5 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.2)] animate-in slide-in-from-top-4 mx-2 mt-4 relative z-0">
             <div className="bg-[#120a05] rounded-[14px] p-4 flex items-center justify-center gap-4 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-r from-red-600/10 to-amber-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -157,7 +166,8 @@ export const BeatStore: React.FC = () => {
           {filteredBeats.length > 0 ? (
             filteredBeats.map((beat) => (
               <div key={beat.id} className="h-full">
-                <BeatCard beat={beat} onPurchase={handlePurchaseClick} />
+                {/* On passe la promo fetchée à la carte pour l'affichage du prix barré */}
+                <BeatCard beat={beat} promo={promo} onPurchase={handlePurchaseClick} />
               </div>
             ))
           ) : (
@@ -190,7 +200,7 @@ export const BeatStore: React.FC = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 custom-scrollbar bg-[#0f0f0f]">
               {selectedBeatForPurchase.licenses.map((lic) => {
-                const discountedPrice = promo ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) : lic.price;
+                const discountedPrice = promo && promo.isActive ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) : lic.price;
                 const isExclusive = lic.fileType === 'EXCLUSIVE';
                 
                 return (
@@ -219,8 +229,8 @@ export const BeatStore: React.FC = () => {
                     </div>
                     <div className="pt-4 border-t border-dashed border-[#3d2b1f] flex items-center justify-between mt-auto">
                       <div className="flex flex-col">
-                        {promo && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
-                        <span className={`text-2xl font-black ${promo ? 'text-emerald-400' : 'text-white'}`}>{discountedPrice}€</span>
+                        {promo && promo.isActive && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
+                        <span className={`text-2xl font-black ${promo && promo.isActive ? 'text-emerald-400' : 'text-white'}`}>{discountedPrice}€</span>
                       </div>
                       <button className={`px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${isExclusive ? 'bg-amber-500 text-black hover:bg-white' : 'bg-[#2a1e16] text-white hover:bg-white hover:text-black'}`}>
                         Ajouter
