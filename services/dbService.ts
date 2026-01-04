@@ -1,70 +1,71 @@
 
-import { Beat } from '../types';
+import { Beat, Transaction, ContractArchive, ScheduleEvent, StorePromotion } from '../types';
 
-// L'initialisation de la DB se fait désormais côté serveur (API), 
-// on garde cette fonction vide pour compatibilité si nécessaire.
-export const initDB = async (): Promise<void> => {
-  return Promise.resolve();
-};
+export const initDB = async (): Promise<void> => Promise.resolve();
 
-export const saveBeat = async (beat: Beat): Promise<void> => {
+// --- GENERIC HELPERS ---
+async function fetchItems<T>(endpoint: string): Promise<T[]> {
   try {
-    const response = await fetch('/api/beats', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(beat),
-    });
-
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") === -1) {
-       throw new Error("L'API a renvoyé une réponse non-JSON (HTML). Vérifiez la configuration vercel.json.");
-    }
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || 'Erreur lors de la sauvegarde sur le serveur');
-    }
-  } catch (error) {
-    console.error("Save Beat Error:", error);
-    throw error;
-  }
-};
-
-export const getAllBeats = async (): Promise<Beat[]> => {
-  try {
-    const response = await fetch('/api/beats');
-    
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") === -1) {
-       console.error("L'API a renvoyé du HTML au lieu du JSON. Vérifiez la configuration des rewrites Vercel.");
-       // Retourne un tableau vide pour ne pas faire planter l'interface
-       return [];
-    }
-    
-    if (!response.ok) {
-      throw new Error('Impossible de récupérer les beats depuis le serveur');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Fetch Beats Error:", error);
+    const res = await fetch(`/api/${endpoint}`);
+    if (!res.ok) throw new Error(`Error fetching ${endpoint}`);
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) return [];
+    return await res.json();
+  } catch (e) {
+    console.error(e);
     return [];
   }
+}
+
+async function saveItem<T>(endpoint: string, item: T): Promise<void> {
+  const res = await fetch(`/api/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error(`Error saving to ${endpoint}`);
+}
+
+async function deleteItem(endpoint: string, id: string): Promise<void> {
+  const res = await fetch(`/api/${endpoint}?id=${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Error deleting from ${endpoint}`);
+}
+
+// --- BEATS ---
+export const saveBeat = (beat: Beat) => saveItem('beats', beat);
+export const getAllBeats = () => fetchItems<Beat>('beats');
+export const deleteBeat = (id: string) => deleteItem('beats', id);
+
+// --- TRANSACTIONS ---
+export const saveTransaction = (tx: Transaction) => saveItem('transactions', tx);
+export const getAllTransactions = () => fetchItems<Transaction>('transactions');
+export const deleteTransaction = (id: string) => deleteItem('transactions', id);
+
+// --- CONTRACTS ---
+export const saveContract = (c: ContractArchive) => saveItem('contracts', c);
+export const getAllContracts = () => fetchItems<ContractArchive>('contracts');
+export const deleteContract = (id: string) => deleteItem('contracts', id);
+
+// --- EVENTS ---
+export const saveEvent = (ev: ScheduleEvent) => saveItem('events', ev);
+export const getAllEvents = () => fetchItems<ScheduleEvent>('events');
+export const deleteEvent = (id: string) => deleteItem('events', id);
+
+// --- SETTINGS (Promo, PIN) ---
+export const getSetting = async <T>(key: string): Promise<T | null> => {
+  try {
+    const res = await fetch(`/api/settings?key=${key}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
 };
 
-export const deleteBeat = async (id: string): Promise<void> => {
-  try {
-    const response = await fetch(`/api/beats?id=${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error('Erreur lors de la suppression sur le serveur');
-    }
-  } catch (error) {
-    console.error("Delete Beat Error:", error);
-    throw error;
-  }
+export const saveSetting = async (key: string, value: any): Promise<void> => {
+  await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  });
 };
