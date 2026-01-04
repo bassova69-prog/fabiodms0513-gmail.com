@@ -1,59 +1,58 @@
 
 import { Beat } from '../types';
 
-const DB_NAME = 'FabioStudioDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'beats';
-
-export const initDB = (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject('Erreur lors de l’ouverture de la base de données');
-
-    request.onupgradeneeded = (event: any) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      }
-    };
-
-    request.onsuccess = (event: any) => resolve(event.target.result);
-  });
+// L'initialisation de la DB se fait désormais côté serveur (API), 
+// on garde cette fonction vide pour compatibilité si nécessaire.
+export const initDB = async (): Promise<void> => {
+  return Promise.resolve();
 };
 
 export const saveBeat = async (beat: Beat): Promise<void> => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.put(beat);
+  try {
+    const response = await fetch('/api/beats', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(beat),
+    });
 
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject('Erreur lors de la sauvegarde du beat');
-  });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Erreur lors de la sauvegarde sur le serveur');
+    }
+  } catch (error) {
+    console.error("Save Beat Error:", error);
+    throw error;
+  }
 };
 
 export const getAllBeats = async (): Promise<Beat[]> => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => resolve(request.result || []);
-    request.onerror = () => reject('Erreur lors de la récupération des beats');
-  });
+  try {
+    const response = await fetch('/api/beats');
+    
+    if (!response.ok) {
+      throw new Error('Impossible de récupérer les beats depuis le serveur');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Fetch Beats Error:", error);
+    return [];
+  }
 };
 
 export const deleteBeat = async (id: string): Promise<void> => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(id);
+  try {
+    const response = await fetch(`/api/beats?id=${id}`, {
+      method: 'DELETE',
+    });
 
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject('Erreur lors de la suppression du beat');
-  });
+    if (!response.ok) {
+      throw new Error('Erreur lors de la suppression sur le serveur');
+    }
+  } catch (error) {
+    console.error("Delete Beat Error:", error);
+    throw error;
+  }
 };
