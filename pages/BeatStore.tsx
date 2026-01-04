@@ -30,11 +30,24 @@ export const BeatStore: React.FC = () => {
       if (savedPromo) {
         const p = JSON.parse(savedPromo);
         if (p.isActive) setPromo(p);
+      } else {
+        // Fallback: Si aucune config locale, on affiche la promo par défaut (simule l'activation depuis le projet Admin)
+        setPromo({
+          isActive: true,
+          discountPercentage: 20,
+          message: "OFFRE LIMITÉE : -20% SUR TOUT LE CATALOGUE !"
+        });
       }
     } catch (e) {
       console.error("Error loading beats from storage:", e);
       setBeats(FEATURED_BEATS);
       setFilteredBeats(FEATURED_BEATS);
+      // Fallback en cas d'erreur
+      setPromo({
+        isActive: true,
+        discountPercentage: 20,
+        message: "OFFRE LIMITÉE : -20% SUR TOUT LE CATALOGUE !"
+      });
     }
   };
 
