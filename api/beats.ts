@@ -11,6 +11,7 @@ export default async function handler(
   const sql = neon(DB_URL);
 
   try {
+    // Création table si inexistante
     await sql`CREATE TABLE IF NOT EXISTS beats (
       id TEXT PRIMARY KEY,
       data JSONB
@@ -23,26 +24,44 @@ export default async function handler(
       let beats;
       if (limitVal && !isNaN(Number(limitVal))) {
         const limitNum = Number(limitVal);
-        beats = await sql`SELECT data FROM beats LIMIT ${limitNum}`;
+        beats = await sql`SELECT id, data FROM beats LIMIT ${limitNum}`;
       } else {
-        beats = await sql`SELECT data FROM beats`;
+        beats = await sql`SELECT id, data FROM beats`;
       }
       
       const enrichedBeats = beats.map((row) => {
         try {
-            // Aplatissement : si data contient une propriété "data", on remonte d'un cran
             let beatData = row.data || {};
+
+            // 1. Déballage : Si les données sont imbriquées dans "data" ou "beat"
             if (beatData.data) {
                 beatData = { ...beatData, ...beatData.data };
                 delete beatData.data;
             }
+            if (beatData.beat) {
+                beatData = { ...beatData, ...beatData.beat };
+                delete beatData.beat;
+            }
             
+            // 2. Garantie de l'ID : On utilise la clé primaire si l'ID manque dans le JSON
             if (!beatData.id && row.id) {
                 beatData.id = row.id;
             }
 
-            // Réparation date
+            // 3. Valeurs par défaut pour affichage coûte que coûte
+            if (!beatData.title) {
+                beatData.title = "Beat sans titre"; 
+            }
+            if (!beatData.coverUrl) {
+                beatData.coverUrl = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80";
+            }
+            if (!beatData.licenses) {
+                beatData.licenses = [];
+            }
+
+            // 4. Gestion Date
             if (!beatData.date) {
+                // Tentative d'extraction du timestamp depuis l'ID (ex: beat-170...)
                 if (beatData.id && typeof beatData.id === 'string' && beatData.id.startsWith('beat-')) {
                     const parts = beatData.id.split('-');
                     if (parts.length > 1) {
@@ -61,10 +80,13 @@ export default async function handler(
             }
             return beatData;
         } catch (e) {
-            return null;
+            console.error("Erreur parsing row:", e);
+            // En cas d'erreur de parsing grave, on renvoie au moins l'ID pour debug
+            return { id: row.id, title: "Données corrompues", date: new Date().toISOString() };
         }
       }).filter(Boolean);
 
+      // Tri par date décroissante
       enrichedBeats.sort((a, b) => {
           const dateA = a.date ? new Date(a.date).getTime() : 0;
           const dateB = b.date ? new Date(b.date).getTime() : 0;
@@ -81,29 +103,23 @@ export default async function handler(
         return response.status(400).json({ error: 'Body invalide ou vide' });
       }
 
-      // Nettoyage : On s'assure de ne pas avoir de structure { data: { ... } }
-      // Si l'utilisateur envoie { beat: {...} } ou { data: {...} }, on extrait le contenu.
+      // Nettoyage structure à la source pour les futurs ajouts
       let beat = body.beat || body.data || body;
 
       if (!beat.id) {
         beat.id = `beat-${Date.now()}`;
       }
 
-      // Si c'est une mise à jour, on s'assure de garder la date de création originale si elle n'est pas fournie
       if (!beat.date) {
-         // On ne force pas la date ici si c'est un update partiel, la DB gérera
+         // Si date non fournie lors de la création/update
       } else {
-         // Si date fournie, on s'assure qu'elle est ISO
          try { beat.date = new Date(beat.date).toISOString(); } catch(e) {}
       }
 
       const beatId = beat.id;
       const beatJson = JSON.stringify(beat);
 
-      // CRITICAL UPDATE: Utilisation de `beats.data || ...` pour fusionner (MERGE) au lieu d'écraser
-      // Si l'ID existe, on prend les anciennes données (beats.data) et on les fusionne avec les nouvelles.
-      // Si l'ID n'existe pas, on insère le nouveau JSON.
-      
+      // Utilisation du merge JSONB (||) pour ne pas écraser les champs existants lors d'un update partiel
       await sql`
         INSERT INTO beats (id, data)
         VALUES (${beatId}, ${beatJson}::jsonb)

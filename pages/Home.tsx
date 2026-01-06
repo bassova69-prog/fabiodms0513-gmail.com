@@ -21,12 +21,11 @@ export const Home: React.FC = () => {
       try {
         const dbBeats = await getAllBeats();
         if (Array.isArray(dbBeats) && dbBeats.length > 0) {
-          // Filtrage pour ne garder que les beats valides (au moins un titre)
-          // Note: l'ID est géré par l'API, mais on vérifie quand même 'b'
-          const validDbBeats = dbBeats.filter(b => b && b.title);
+          // Filtrage minimal : on accepte tout objet qui ressemble à un beat
+          const validDbBeats = dbBeats.filter(b => b && typeof b === 'object');
           
-          // On prend les plus récents (inverse) et on limite à 4
-          setDisplayBeats([...validDbBeats].reverse().slice(0, 4));
+          // On prend les 4 premiers (l'API les renvoie déjà triés par date décroissante)
+          setDisplayBeats(validDbBeats.slice(0, 4));
         } else {
           setDisplayBeats([]);
         }
@@ -88,7 +87,7 @@ export const Home: React.FC = () => {
                             {[1,2,3].map(i => <div key={i} className="w-1 bg-black animate-pulse" style={{height: `${i*33}%`}}></div>)}
                           </div>
                         ) : <Play className="w-5 h-5 fill-current group-hover/btn:scale-125 transition-transform" />}
-                        {isFeaturedPlaying ? 'EN LECTURE' : `Écouter : ${featuredBeat.title}`}
+                        {isFeaturedPlaying ? 'EN LECTURE' : `Écouter : ${featuredBeat.title || 'Dernier Beat'}`}
                     </button>
                   ) : (
                     <button className="bg-white/10 text-white font-black px-12 py-5 rounded-2xl cursor-default border border-white/10 uppercase text-sm">

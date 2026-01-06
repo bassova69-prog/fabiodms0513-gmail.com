@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BeatCard } from '../components/BeatCard';
-import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2 } from 'lucide-react';
+import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Beat, StorePromotion, License } from '../types';
 import { getAllBeats, getSetting } from '../services/dbService';
@@ -17,18 +17,23 @@ export const BeatStore: React.FC = () => {
   const [filteredBeats, setFilteredBeats] = useState<Beat[]>([]);
   const [promo, setPromo] = useState<StorePromotion | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   
   const [selectedBeatForPurchase, setSelectedBeatForPurchase] = useState<Beat | null>(null);
 
   // Chargement des beats (UNIQUEMENT NEON)
   const loadBeats = async () => {
+    setIsLoading(true);
     try {
       const savedCustomBeats = await getAllBeats();
       
       if (Array.isArray(savedCustomBeats)) {
-        // Filtrage des beats invalides qui pourraient faire crasher l'app
-        const validBeats = savedCustomBeats.filter(b => b && b.id && b.title);
-        const allBeats = [...validBeats].reverse();
+        // ON ACCEPTE TOUT CE QUI A UN ID. L'API S'OCCUPE DE METTRE UN TITRE PAR DÉFAUT SI VIDE.
+        // On évite juste les objets nuls/undefined.
+        const validBeats = savedCustomBeats.filter(b => b && typeof b === 'object');
+        
+        const allBeats = [...validBeats]; 
+        // Note: Le tri est déjà fait par l'API normalement, mais on garde l'ordre reçu
         
         setBeats(allBeats);
         setFilteredBeats(prev => {
@@ -43,6 +48,8 @@ export const BeatStore: React.FC = () => {
       console.error("Error loading beats:", e);
       setBeats([]);
       setFilteredBeats([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -112,10 +119,11 @@ export const BeatStore: React.FC = () => {
   }, [checkPromo, searchParams]);
 
   useEffect(() => {
-    const results = beats.filter(beat => 
-      beat.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      beat.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const results = beats.filter(beat => {
+        const titleMatch = beat.title ? beat.title.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+        const tagMatch = beat.tags ? beat.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) : false;
+        return titleMatch || tagMatch;
+    });
     setFilteredBeats(results);
   }, [searchTerm, beats]);
 
@@ -206,7 +214,7 @@ export const BeatStore: React.FC = () => {
                    <div className="relative flex-1 md:w-64">
                       <input 
                           type="text" 
-                          placeholder="Rechercher par titre, tag..." 
+                          placeholder="Rechercher..." 
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           className="w-full bg-[#1a120b] border border-[#3d2b1f] text-white text-sm rounded-xl pl-10 pr-4 py-2.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all placeholder-[#5c4a3e]"
@@ -214,8 +222,12 @@ export const BeatStore: React.FC = () => {
                       <Search className="w-4 h-4 text-[#8c7a6b] absolute left-3.5 top-3" />
                    </div>
                    
-                   <button className="flex items-center justify-center gap-2 bg-[#1a120b] hover:bg-[#2a1e16] text-[#d4a373] px-4 py-2.5 rounded-xl border border-[#3d2b1f] transition-colors shrink-0">
-                      <Filter className="w-4 h-4" />
+                   <button 
+                    onClick={loadBeats}
+                    className="flex items-center justify-center gap-2 bg-[#1a120b] hover:bg-[#2a1e16] text-[#d4a373] px-3 py-2.5 rounded-xl border border-[#3d2b1f] transition-colors shrink-0"
+                    title="Rafraîchir"
+                   >
+                      <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                    </button>
                    
                    <button 
@@ -246,8 +258,10 @@ export const BeatStore: React.FC = () => {
           ) : (
              <div className="col-span-full py-32 text-center flex flex-col items-center justify-center opacity-40 border-2 border-dashed border-[#2a2a2a] rounded-[2rem]">
                 <Music className="w-16 h-16 mb-4 text-[#3d2b1f]" />
-                <p className="font-bold text-xl text-[#8c7a6b]">Aucun beat disponible</p>
-                <p className="text-sm italic text-[#5c4a3e] mt-2">Le catalogue est en cours de mise à jour.</p>
+                <p className="font-bold text-xl text-[#8c7a6b]">
+                   {isLoading ? "Chargement des beats..." : "Aucun beat trouvé"}
+                </p>
+                {!isLoading && <p className="text-sm italic text-[#5c4a3e] mt-2">Essayez de rafraîchir ou vérifiez votre connexion.</p>}
              </div>
           )}
       </div>
@@ -270,50 +284,56 @@ export const BeatStore: React.FC = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 custom-scrollbar bg-[#0f0f0f]">
-              {selectedBeatForPurchase.licenses?.map((lic) => {
-                const isValid = isPromoValidForBeat(selectedBeatForPurchase.id);
-                const discountedPrice = isValid && promo 
-                    ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) 
-                    : lic.price;
-                
-                const isExclusive = lic.fileType === 'EXCLUSIVE';
-                
-                return (
-                  <div 
-                    key={lic.id} 
-                    className={`p-6 rounded-2xl border transition-all flex flex-col justify-between group cursor-pointer relative overflow-hidden ${isExclusive ? 'bg-gradient-to-br from-[#2a1e16] to-black border-amber-600/50 hover:border-amber-500' : 'bg-[#1a120b] border-[#3d2b1f] hover:border-[#8c7a6b]'}`}
-                    onClick={(e) => handleAddToCart(e, selectedBeatForPurchase, lic)}
-                  >
-                    {isExclusive && <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] font-black px-3 py-1 rounded-bl-xl">BEST SELLER</div>}
+              {selectedBeatForPurchase.licenses?.length > 0 ? (
+                  selectedBeatForPurchase.licenses.map((lic) => {
+                    const isValid = isPromoValidForBeat(selectedBeatForPurchase.id);
+                    const discountedPrice = isValid && promo 
+                        ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) 
+                        : lic.price;
                     
-                    <div>
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className={`p-3 rounded-xl border ${isExclusive ? 'bg-amber-500 text-black border-amber-400' : 'bg-[#2a1e16] border-[#3d2b1f] text-[#a89080] group-hover:text-white'}`}>
-                            {getLicenseIcon(lic.fileType, "w-6 h-6")}
-                        </div>
-                        <h4 className={`font-black text-lg tracking-tight ${isExclusive ? 'text-amber-500' : 'text-white'}`}>{lic.name}</h4>
-                      </div>
-                      <div className="space-y-2 mb-8 pl-1">
-                        {lic.features.map((feature, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-xs text-[#a89080] group-hover:text-[#d1d5db]">
-                              <Check className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isExclusive ? 'text-amber-500' : 'text-emerald-500'}`} />
-                              <span>{feature}</span>
+                    const isExclusive = lic.fileType === 'EXCLUSIVE';
+                    
+                    return (
+                      <div 
+                        key={lic.id} 
+                        className={`p-6 rounded-2xl border transition-all flex flex-col justify-between group cursor-pointer relative overflow-hidden ${isExclusive ? 'bg-gradient-to-br from-[#2a1e16] to-black border-amber-600/50 hover:border-amber-500' : 'bg-[#1a120b] border-[#3d2b1f] hover:border-[#8c7a6b]'}`}
+                        onClick={(e) => handleAddToCart(e, selectedBeatForPurchase, lic)}
+                      >
+                        {isExclusive && <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] font-black px-3 py-1 rounded-bl-xl">BEST SELLER</div>}
+                        
+                        <div>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className={`p-3 rounded-xl border ${isExclusive ? 'bg-amber-500 text-black border-amber-400' : 'bg-[#2a1e16] border-[#3d2b1f] text-[#a89080] group-hover:text-white'}`}>
+                                {getLicenseIcon(lic.fileType, "w-6 h-6")}
+                            </div>
+                            <h4 className={`font-black text-lg tracking-tight ${isExclusive ? 'text-amber-500' : 'text-white'}`}>{lic.name}</h4>
                           </div>
-                        ))}
+                          <div className="space-y-2 mb-8 pl-1">
+                            {lic.features.map((feature, idx) => (
+                              <div key={idx} className="flex items-start gap-2 text-xs text-[#a89080] group-hover:text-[#d1d5db]">
+                                  <Check className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${isExclusive ? 'text-amber-500' : 'text-emerald-500'}`} />
+                                  <span>{feature}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="pt-4 border-t border-dashed border-[#3d2b1f] flex items-center justify-between mt-auto">
+                          <div className="flex flex-col">
+                            {isValid && promo && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
+                            <span className={`text-2xl font-black ${isValid && promo ? 'text-emerald-400' : 'text-white'}`}>{discountedPrice}€</span>
+                          </div>
+                          <button className={`px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${isExclusive ? 'bg-amber-500 text-black hover:bg-white' : 'bg-[#2a1e16] text-white hover:bg-white hover:text-black'}`}>
+                            Ajouter
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="pt-4 border-t border-dashed border-[#3d2b1f] flex items-center justify-between mt-auto">
-                      <div className="flex flex-col">
-                        {isValid && promo && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
-                        <span className={`text-2xl font-black ${isValid && promo ? 'text-emerald-400' : 'text-white'}`}>{discountedPrice}€</span>
-                      </div>
-                      <button className={`px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all ${isExclusive ? 'bg-amber-500 text-black hover:bg-white' : 'bg-[#2a1e16] text-white hover:bg-white hover:text-black'}`}>
-                        Ajouter
-                      </button>
-                    </div>
+                    );
+                  })
+              ) : (
+                  <div className="col-span-full text-center text-[#8c7a6b] italic py-10">
+                      Aucune licence configurée pour ce beat.
                   </div>
-                );
-              })}
+              )}
             </div>
           </div>
         </div>
