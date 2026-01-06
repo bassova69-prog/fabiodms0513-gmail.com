@@ -2,8 +2,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
-// Note: On retire l'import de crypto qui peut faire planter certaines runtimes serverless si inutilisé.
-
 const DB_URL = "postgresql://neondb_owner:npg_j8usSmDb5FpZ@ep-sparkling-hall-a4ygj36w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
 export default async function handler(
@@ -24,7 +22,6 @@ export default async function handler(
 
       let beats;
       if (limitVal && !isNaN(Number(limitVal))) {
-        // Optimisation pour le checkConnection
         const limitNum = Number(limitVal);
         beats = await sql`SELECT data FROM beats LIMIT ${limitNum}`;
       } else {
@@ -33,20 +30,23 @@ export default async function handler(
       
       const enrichedBeats = beats.map((row) => {
         try {
-            const beatData = row.data || {};
+            // Aplatissement : si data contient une propriété "data", on remonte d'un cran
+            let beatData = row.data || {};
+            if (beatData.data) {
+                beatData = { ...beatData, ...beatData.data };
+                delete beatData.data;
+            }
             
-            // Correction ID si manquant dans le JSON mais présent en clé primaire
             if (!beatData.id && row.id) {
                 beatData.id = row.id;
             }
 
-            // Réparation de la date via l'ID (timestamp)
+            // Réparation date
             if (!beatData.date) {
                 if (beatData.id && typeof beatData.id === 'string' && beatData.id.startsWith('beat-')) {
                     const parts = beatData.id.split('-');
                     if (parts.length > 1) {
                         const timestamp = parseInt(parts[1], 10);
-                        // Si le timestamp est valide (> année 2020)
                         if (!isNaN(timestamp) && timestamp > 1600000000000) {
                             beatData.date = new Date(timestamp).toISOString();
                         } else {
@@ -61,13 +61,10 @@ export default async function handler(
             }
             return beatData;
         } catch (e) {
-            console.warn("Row corrupt:", row);
             return null;
         }
       }).filter(Boolean);
 
-      // Tri par date décroissante (plus récent en premier)
-      // Utilisation sécurisée de getTime() pour éviter les crashs sur date invalide
       enrichedBeats.sort((a, b) => {
           const dateA = a.date ? new Date(a.date).getTime() : 0;
           const dateB = b.date ? new Date(b.date).getTime() : 0;
@@ -78,30 +75,43 @@ export default async function handler(
     }
 
     if (request.method === 'POST') {
-      const beat = request.body;
+      const body = request.body;
       
-      if (!beat) {
+      if (!body) {
         return response.status(400).json({ error: 'Body invalide ou vide' });
       }
+
+      // Nettoyage : On s'assure de ne pas avoir de structure { data: { ... } }
+      // Si l'utilisateur envoie { beat: {...} } ou { data: {...} }, on extrait le contenu.
+      let beat = body.beat || body.data || body;
 
       if (!beat.id) {
         beat.id = `beat-${Date.now()}`;
       }
 
+      // Si c'est une mise à jour, on s'assure de garder la date de création originale si elle n'est pas fournie
       if (!beat.date) {
-        beat.date = new Date().toISOString();
+         // On ne force pas la date ici si c'est un update partiel, la DB gérera
+      } else {
+         // Si date fournie, on s'assure qu'elle est ISO
+         try { beat.date = new Date(beat.date).toISOString(); } catch(e) {}
       }
 
+      const beatId = beat.id;
       const beatJson = JSON.stringify(beat);
 
+      // CRITICAL UPDATE: Utilisation de `beats.data || ...` pour fusionner (MERGE) au lieu d'écraser
+      // Si l'ID existe, on prend les anciennes données (beats.data) et on les fusionne avec les nouvelles.
+      // Si l'ID n'existe pas, on insère le nouveau JSON.
+      
       await sql`
         INSERT INTO beats (id, data)
-        VALUES (${beat.id}, ${beatJson}::jsonb)
+        VALUES (${beatId}, ${beatJson}::jsonb)
         ON CONFLICT (id) DO UPDATE
-        SET data = ${beatJson}::jsonb;
+        SET data = beats.data || ${beatJson}::jsonb;
       `;
       
-      return response.status(200).json({ success: true, id: beat.id });
+      return response.status(200).json({ success: true, id: beatId });
     }
 
     if (request.method === 'DELETE') {
@@ -120,7 +130,6 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('Database Error:', error);
-    // On renvoie un JSON valide même en cas d'erreur 500 pour que le front puisse l'afficher
     return response.status(500).json({ 
         error: 'Erreur serveur base de données', 
         details: error.message 
