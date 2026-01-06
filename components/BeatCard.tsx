@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Play, ShoppingCart, Youtube, Tag, BarChart3 } from 'lucide-react';
+import { Play, ShoppingCart, Youtube, Tag, BarChart3, Calendar } from 'lucide-react';
 import { Beat, StorePromotion } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 
@@ -33,6 +33,12 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
   const handleBuyClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onPurchase(beat);
+  };
+
+  // Helper date
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
   };
 
   // Protection pour les tags : on s'assure que c'est un tableau
@@ -69,17 +75,21 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
         </div>
 
         {/* Badges Compact */}
-        <div className="absolute top-2 left-2 flex gap-1">
-          {promo && promo.isActive && (
-              <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
-              <Tag className="w-2.5 h-2.5 fill-current" /> PROMO -{promo.discountPercentage}%
-              </div>
-          )}
-          {beat.bpm && (
-              <div className="bg-black/60 backdrop-blur-md text-white text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/10 flex items-center gap-1">
-                  <BarChart3 className="w-2.5 h-2.5" /> {beat.bpm}
-              </div>
-          )}
+        <div className="absolute top-2 left-2 right-2 flex justify-between">
+          <div className="flex gap-1">
+            {promo && promo.isActive && (
+                <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
+                <Tag className="w-2.5 h-2.5 fill-current" /> -{promo.discountPercentage}%
+                </div>
+            )}
+          </div>
+          <div className="flex gap-1">
+            {beat.bpm && (
+                <div className="bg-black/60 backdrop-blur-md text-white text-[8px] font-bold px-1.5 py-0.5 rounded border border-white/10 flex items-center gap-1">
+                    <BarChart3 className="w-2.5 h-2.5" /> {beat.bpm}
+                </div>
+            )}
+          </div>
         </div>
       </div>
       
@@ -104,7 +114,12 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
               </div>
           </div>
 
-          <div className="flex flex-wrap gap-1 mt-0.5">
+          <div className="flex flex-wrap items-center gap-2 mt-0.5 min-h-[20px]">
+               {beat.date && (
+                   <span className="flex items-center gap-1 text-[8px] text-[#5c4a3e] font-bold bg-[#1a120b] border border-[#2a1e16] px-1.5 py-0.5 rounded">
+                       <Calendar className="w-2.5 h-2.5" /> {formatDate(beat.date)}
+                   </span>
+               )}
               {displayTags.map((tag, i) => (
                   <span key={i} className="text-[8px] px-1.5 py-px bg-[#2a1e16] border border-[#3d2b1f] rounded text-[#a89080] whitespace-nowrap">
                       #{tag}

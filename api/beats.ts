@@ -12,27 +12,39 @@ export default async function handler(
   const sql = neon(DB_URL);
 
   try {
-    // 1. Création de la table si elle n'existe pas
+    // On revient au schéma simple et stable
     await sql`CREATE TABLE IF NOT EXISTS beats (
       id TEXT PRIMARY KEY,
-      data JSONB,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      data JSONB
     );`;
 
-    // 2. MIGRATION AUTOMATIQUE : On s'assure que la colonne created_at existe
-    // C'est cette ligne qui corrige votre erreur de connexion actuelle
-    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`;
-
     if (request.method === 'GET') {
-      const beats = await sql`SELECT data, created_at FROM beats ORDER BY created_at ASC;`;
+      // On ne sélectionne QUE les données JSON pour éviter toute erreur de colonne
+      const beats = await sql`SELECT data FROM beats`;
       
       const enrichedBeats = beats.map((row) => {
         const beatData = row.data;
-        if (!beatData.date && row.created_at) {
-          beatData.date = row.created_at;
+        
+        // LOGIQUE DE RÉPARATION DE LA DATE (Côté Serveur)
+        // Si pas de date, on essaie de l'extraire de l'ID (ex: beat-1767715149742)
+        if (!beatData.date) {
+            if (beatData.id && beatData.id.startsWith('beat-')) {
+                const timestamp = parseInt(beatData.id.split('-')[1]);
+                // Si le timestamp semble valide (supérieur à 2020)
+                if (!isNaN(timestamp) && timestamp > 1600000000000) {
+                    beatData.date = new Date(timestamp).toISOString();
+                } else {
+                    beatData.date = new Date().toISOString();
+                }
+            } else {
+                beatData.date = new Date().toISOString();
+            }
         }
         return beatData;
       });
+
+      // Tri par date (du plus récent au plus ancien)
+      enrichedBeats.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return response.status(200).json(enrichedBeats);
     }
@@ -44,17 +56,19 @@ export default async function handler(
         return response.status(400).json({ error: 'Données invalides' });
       }
 
+      // Si l'ID est fourni sans prefixe ou manquant
       if (!beat.id) {
-        beat.id = randomUUID();
+        beat.id = `beat-${Date.now()}`;
       }
 
+      // On assure une date dans le JSON sauvegardé
       if (!beat.date) {
         beat.date = new Date().toISOString();
       }
 
       await sql`
-        INSERT INTO beats (id, data, created_at)
-        VALUES (${beat.id}, ${JSON.stringify(beat)}, NOW())
+        INSERT INTO beats (id, data)
+        VALUES (${beat.id}, ${JSON.stringify(beat)})
         ON CONFLICT (id) DO UPDATE
         SET data = ${JSON.stringify(beat)};
       `;
@@ -64,10 +78,7 @@ export default async function handler(
 
     if (request.method === 'DELETE') {
       const { id } = request.query;
-      
-      if (!id || Array.isArray(id)) {
-        return response.status(400).json({ error: 'ID manquant' });
-      }
+      if (!id) return response.status(400).json({ error: 'ID manquant' });
       
       await sql`DELETE FROM beats WHERE id = ${id.toString()}`;
       return response.status(200).json({ success: true });

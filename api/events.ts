@@ -10,22 +10,18 @@ export default async function handler(request: VercelRequest, response: VercelRe
   try {
     await sql`CREATE TABLE IF NOT EXISTS events (
       id TEXT PRIMARY KEY,
-      data JSONB,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      data JSONB
     );`;
 
-    // Migration de sécurité
-    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`;
-
     if (request.method === 'GET') {
-      const rows = await sql`SELECT data FROM events ORDER BY created_at ASC;`;
+      const rows = await sql`SELECT data FROM events`;
       return response.status(200).json(rows.map(r => r.data));
     }
 
     if (request.method === 'POST') {
       const item = request.body;
       await sql`
-        INSERT INTO events (id, data, created_at) VALUES (${item.id}, ${JSON.stringify(item)}, NOW())
+        INSERT INTO events (id, data) VALUES (${item.id}, ${JSON.stringify(item)})
         ON CONFLICT (id) DO UPDATE SET data = ${JSON.stringify(item)};
       `;
       return response.status(200).json({ success: true });

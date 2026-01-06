@@ -10,16 +10,16 @@ export default async function handler(request: VercelRequest, response: VercelRe
   try {
     await sql`CREATE TABLE IF NOT EXISTS transactions (
       id TEXT PRIMARY KEY,
-      data JSONB,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      data JSONB
     );`;
     
-    // Migration de sécurité
-    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`;
-
     if (request.method === 'GET') {
-      const rows = await sql`SELECT data FROM transactions ORDER BY created_at DESC;`;
-      return response.status(200).json(rows.map(r => r.data));
+      const rows = await sql`SELECT data FROM transactions`;
+      // Tri côté JS pour sécurité
+      const data = rows.map(r => r.data).sort((a: any, b: any) => 
+        new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()
+      );
+      return response.status(200).json(data);
     }
 
     if (request.method === 'POST') {
@@ -27,7 +27,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       if (!item.id) return response.status(400).json({ error: 'ID manquant' });
       
       await sql`
-        INSERT INTO transactions (id, data, created_at) VALUES (${item.id}, ${JSON.stringify(item)}, NOW())
+        INSERT INTO transactions (id, data) VALUES (${item.id}, ${JSON.stringify(item)})
         ON CONFLICT (id) DO UPDATE SET data = ${JSON.stringify(item)};
       `;
       return response.status(200).json({ success: true });
