@@ -34,6 +34,20 @@ async function deleteItem(endpoint: string, id: string): Promise<void> {
   if (!res.ok) throw new Error(`Error deleting from ${endpoint}`);
 }
 
+// --- CONNECTION CHECK ---
+export const checkConnection = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Tentative de fetch léger avec timestamp pour éviter le cache
+    const res = await fetch(`/api/beats?limit=1&t=${Date.now()}`);
+    if (res.ok) {
+      return { success: true, message: "Base de Données Neon Connectée" };
+    }
+    return { success: false, message: `Erreur API: ${res.status} ${res.statusText}` };
+  } catch (e) {
+    return { success: false, message: "Serveur injoignable (Check Logs)" };
+  }
+};
+
 // --- BEATS ---
 export const saveBeat = (beat: Beat) => saveItem('beats', beat);
 export const getAllBeats = () => fetchItems<Beat>('beats');

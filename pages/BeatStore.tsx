@@ -50,7 +50,20 @@ export const BeatStore: React.FC = () => {
 
       // B. Récupération Dynamique depuis Neon DB (clé 'promo')
       try {
-        const dbPromo = await getSetting<StorePromotion>('promo');
+        const rawDbPromo = await getSetting<any>('promo');
+        console.log("Donnée reçue de la DB:", rawDbPromo);
+
+        let dbPromo: StorePromotion | null = rawDbPromo;
+
+        // Correction parsing si c'est une string (double encodage possible)
+        if (typeof rawDbPromo === 'string') {
+            try {
+                dbPromo = JSON.parse(rawDbPromo);
+            } catch (e) {
+                console.error("Erreur parsing promo JSON:", e);
+            }
+        }
+
         if (dbPromo && dbPromo.isActive) {
            setPromo(dbPromo);
            return;
