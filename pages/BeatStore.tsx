@@ -11,29 +11,32 @@ import { usePlayer } from '../contexts/PlayerContext';
 export const BeatStore: React.FC = () => {
   const { cartCount, toggleCart, addToCart } = useCart();
   const { playBeat } = usePlayer();
-  const [searchParams] = useSearchParams(); // Utilisation du hook standard React Router pour les URLs
+  const [searchParams] = useSearchParams();
 
   const [beats, setBeats] = useState<Beat[]>([]);
   const [filteredBeats, setFilteredBeats] = useState<Beat[]>([]);
   const [promo, setPromo] = useState<StorePromotion | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // État pour gérer la modale d'achat
   const [selectedBeatForPurchase, setSelectedBeatForPurchase] = useState<Beat | null>(null);
 
-  // Fonction pour charger les beats (UNIQUEMENT NEON)
+  // Chargement des beats (UNIQUEMENT NEON)
   const loadBeats = async () => {
     try {
       const savedCustomBeats = await getAllBeats();
-      // On prend uniquement les beats de la DB (inversés pour avoir les plus récents en premier)
-      const allBeats = [...savedCustomBeats].reverse();
       
-      setBeats(allBeats);
-      setFilteredBeats(prev => {
-        // Garder le filtre actuel si une recherche est en cours
-        if (searchTerm) return prev; 
-        return allBeats;
-      });
+      // SÉCURITÉ : On s'assure que c'est bien un tableau
+      if (Array.isArray(savedCustomBeats)) {
+        const allBeats = [...savedCustomBeats].reverse();
+        setBeats(allBeats);
+        setFilteredBeats(prev => {
+          if (searchTerm) return prev; 
+          return allBeats;
+        });
+      } else {
+        setBeats([]);
+        setFilteredBeats([]);
+      }
     } catch (e) {
       console.error("Error loading beats:", e);
       setBeats([]);
@@ -41,9 +44,8 @@ export const BeatStore: React.FC = () => {
     }
   };
 
-  // Fonction unifiée pour vérifier la promo (URL > DB)
   const checkPromo = useCallback(async () => {
-    // 1. Vérification URL (Prioritaire et via searchParams pour éviter les bugs d'encodage)
+    // 1. Vérification URL
     const urlPromoMessage = searchParams.get('promo');
     
     if (urlPromoMessage) {
@@ -53,19 +55,18 @@ export const BeatStore: React.FC = () => {
         
         setPromo({
           isActive: true,
-          message: urlPromoMessage, // Déjà décodé correctement par searchParams
+          message: urlPromoMessage,
           discountPercentage: urlPct ? parseInt(urlPct) : 20,
           type: (urlPromoBG === 'orange' || urlPromoMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
           scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
           targetBeatIds: urlIds ? urlIds.split(',') : []
         });
-        return; // On arrête là si l'URL force une promo
+        return;
     }
 
-    // 2. Récupération Dynamique depuis Neon DB si pas d'URL
+    // 2. Récupération Dynamique DB
     try {
       const rawDbPromo = await getSetting<any>('promo');
-      
       let dbPromo: StorePromotion | null = rawDbPromo;
 
       if (typeof rawDbPromo === 'string') {
@@ -86,21 +87,16 @@ export const BeatStore: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Initialisation et Polling
   useEffect(() => {
-    // 1. Chargement initial complet
     loadBeats();
     checkPromo();
 
-    // 2. Mise en place du polling pour la promo DB (toutes les 5 secondes)
     const intervalId = setInterval(() => {
-        // On ne refresh la promo depuis la DB que si elle n'est pas fixée par l'URL
         if (!searchParams.get('promo')) {
             checkPromo();
         }
     }, 5000);
 
-    // 3. Rafraîchissement immédiat quand l'utilisateur revient sur l'onglet
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
             checkPromo();
@@ -115,11 +111,10 @@ export const BeatStore: React.FC = () => {
     };
   }, [checkPromo, searchParams]);
 
-  // Filtrage local
   useEffect(() => {
     const results = beats.filter(beat => 
       beat.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      beat.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      beat.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredBeats(results);
   }, [searchTerm, beats]);
@@ -172,7 +167,7 @@ export const BeatStore: React.FC = () => {
 
   return (
     <div className="pb-28 relative">
-      {/* BANDEAU PROMO SI ACTIF - C'est ici que le bandeau est rendu */}
+      {/* BANDEAU PROMO */}
       {promo && promo.isActive && !selectedBeatForPurchase && (
         <div className={`mb-6 p-0.5 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.2)] animate-in slide-in-from-top-4 mx-2 mt-4 relative z-0 ${
             promo.type === 'BULK_DEAL' 
@@ -198,7 +193,7 @@ export const BeatStore: React.FC = () => {
         </div>
       )}
 
-      {/* HEADER & FILTERS (Masqué si modale ouverte) */}
+      {/* HEADER & FILTERS */}
       {!selectedBeatForPurchase && (
         <div className="sticky top-14 bg-[#0f0f0f] z-[49] py-6 -mx-4 px-6 md:mx-0 md:px-0 border-b border-[#2a2a2a] mb-12 shadow-2xl transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -241,7 +236,6 @@ export const BeatStore: React.FC = () => {
           {filteredBeats.length > 0 ? (
             filteredBeats.map((beat) => (
               <div key={beat.id} className="h-full">
-                {/* On passe la promo fetchée à la carte SEULEMENT si elle s'applique à ce beat */}
                 <BeatCard 
                     beat={beat} 
                     promo={isPromoValidForBeat(beat.id) ? promo : null} 
@@ -253,17 +247,16 @@ export const BeatStore: React.FC = () => {
              <div className="col-span-full py-32 text-center flex flex-col items-center justify-center opacity-40 border-2 border-dashed border-[#2a2a2a] rounded-[2rem]">
                 <Music className="w-16 h-16 mb-4 text-[#3d2b1f]" />
                 <p className="font-bold text-xl text-[#8c7a6b]">Aucun beat disponible</p>
-                <p className="text-sm italic text-[#5c4a3e] mt-2">Le catalogue est en cours de mise à jour.</p>
+                <p className="text-sm italic text-[#5c4a3e] mt-2">Le catalogue est en cours de mise à jour ou vide.</p>
              </div>
           )}
       </div>
 
-      {/* --- MODAL LICENCES (Gérée au niveau du Store) --- */}
+      {/* --- MODAL LICENCES --- */}
       {selectedBeatForPurchase && (
         <div className="fixed inset-0 top-[56px] z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md" onClick={closePurchaseModal} />
           <div className="relative w-full max-w-4xl bg-[#1a120b] border border-[#3d2b1f] rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
-            {/* Header */}
             <div className="p-6 border-b border-[#3d2b1f] flex justify-between items-center bg-[#120a05]">
               <div className="flex items-center gap-4">
                 <img src={selectedBeatForPurchase.coverUrl} className="w-16 h-16 rounded-xl object-cover border border-[#3d2b1f]" alt={selectedBeatForPurchase.title} />
@@ -276,9 +269,8 @@ export const BeatStore: React.FC = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 custom-scrollbar bg-[#0f0f0f]">
-              {selectedBeatForPurchase.licenses.map((lic) => {
+              {selectedBeatForPurchase.licenses?.map((lic) => {
                 const isValid = isPromoValidForBeat(selectedBeatForPurchase.id);
                 const discountedPrice = isValid && promo 
                     ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) 

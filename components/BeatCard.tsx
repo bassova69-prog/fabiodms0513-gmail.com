@@ -13,10 +13,15 @@ interface BeatCardProps {
 export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
 
+  // Protection contre les données incomplètes pour éviter l'écran noir
+  if (!beat) return null;
+
   const isCurrent = currentBeat?.id === beat.id;
   const isCurrentAndPlaying = isCurrent && isPlaying;
   
-  const originalLowestPrice = beat.licenses[0]?.price || 0;
+  // Utilisation sécurisée de l'accès aux licences (?. et || 0)
+  const originalLowestPrice = beat.licenses?.[0]?.price || 0;
+  
   // Calcul du prix remisé basé sur la prop 'promo' passée par le parent (Store ou Home)
   const lowestPrice = promo && promo.isActive
     ? Number((originalLowestPrice * (1 - promo.discountPercentage / 100)).toFixed(2))
@@ -97,7 +102,7 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
           </div>
 
           <div className="flex flex-wrap gap-1 mt-0.5">
-              {beat.tags.slice(0, 3).map((tag, i) => (
+              {beat.tags && beat.tags.slice(0, 3).map((tag, i) => (
                   <span key={i} className="text-[8px] px-1.5 py-px bg-[#2a1e16] border border-[#3d2b1f] rounded text-[#a89080] whitespace-nowrap">
                       #{tag}
                   </span>
