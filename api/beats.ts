@@ -11,7 +11,6 @@ export default async function handler(
   const sql = neon(DB_URL);
 
   try {
-    // Création table si inexistante (fallback)
     await sql`CREATE TABLE IF NOT EXISTS beats (
       id TEXT PRIMARY KEY,
       data JSONB
@@ -21,130 +20,115 @@ export default async function handler(
       const { limit } = request.query;
       
       let rows;
-      // Nous sélectionnons explicitement les colonnes pour garantir qu'elles sont trouvées
-      // même si le schéma a évolué récemment.
-      // On utilise le COALESCE pour gérer les cas NULL potentiels directement en SQL si besoin,
-      // mais ici on fait simple pour laisser le JS gérer.
       if (limit && !isNaN(Number(limit))) {
         const limitNum = Number(limit);
-        rows = await sql`
-          SELECT 
-            id, data, title, bpm, cover_url, audio_url, mp3_url, wav_url, stems_url, 
-            youtube_id, date, tags, 
-            price_mp3, price_wav, price_trackout, price_exclusive, price_lease 
-          FROM beats 
-          LIMIT ${limitNum}
-        `;
+        rows = await sql`SELECT * FROM beats LIMIT ${limitNum}`;
       } else {
-        rows = await sql`
-          SELECT 
-            id, data, title, bpm, cover_url, audio_url, mp3_url, wav_url, stems_url, 
-            youtube_id, date, tags, 
-            price_mp3, price_wav, price_trackout, price_exclusive, price_lease 
-          FROM beats
-        `;
+        rows = await sql`SELECT * FROM beats`;
       }
       
       const enrichedBeats = rows.map((row) => {
         try {
-            // 1. Base : données JSONB (fallback)
-            let beatData = row.data || {};
-
-            // Déballage si nécessaire
-            if (beatData.data) {
-                beatData = { ...beatData, ...beatData.data };
-                delete beatData.data;
+            // 1. Récupération et nettoyage des données JSONB (fallback)
+            let beatData = row.data;
+            
+            // Protection contre le JSON retourné sous forme de string
+            if (typeof beatData === 'string') {
+                try { beatData = JSON.parse(beatData); } catch (e) { beatData = {}; }
             }
-            if (beatData.beat) {
+            if (!beatData || typeof beatData !== 'object') {
+                beatData = {};
+            }
+
+            // Déballage des structures imbriquées (legacy ou import externe)
+            if (beatData.data && typeof beatData.data === 'object') {
+                beatData = { ...beatData, ...beatData.data };
+            }
+            if (beatData.beat && typeof beatData.beat === 'object') {
                 beatData = { ...beatData, ...beatData.beat };
-                delete beatData.beat;
             }
             
-            // 2. Initialisation de l'objet Beat avec l'ID (toujours présent)
+            // 2. Initialisation de l'objet Beat
             const beat: any = {
                 id: row.id,
-                ...beatData // On étale les données JSONB en premier (priorité faible)
+                ...beatData
             };
 
-            // 3. FUSION : Les colonnes explicites de la DB écrasent le JSONB (priorité forte)
-            if (row.title) beat.title = row.title;
-            if (row.bpm) beat.bpm = Number(row.bpm);
-            if (row.tags && Array.isArray(row.tags)) beat.tags = row.tags;
+            // 3. FUSION : Les colonnes explicites de la DB sont prioritaires
+            // On vérifie !== null et !== undefined pour ne pas écraser avec du vide si le JSON était bon
+            if (row.title !== null && row.title !== undefined) beat.title = row.title;
+            if (row.bpm !== null) beat.bpm = Number(row.bpm);
             if (row.cover_url) beat.coverUrl = row.cover_url;
             if (row.audio_url) beat.audioUrl = row.audio_url;
             if (row.mp3_url) beat.mp3Url = row.mp3_url;
             if (row.wav_url) beat.wavUrl = row.wav_url;
             if (row.stems_url) beat.stemsUrl = row.stems_url;
             if (row.youtube_id) beat.youtubeId = row.youtube_id;
-            if (row.date) beat.date = row.date;
+            
+            // Gestion de la date (Priorité: colonne date > colonne created_at > JSON > ID)
+            if (row.date) {
+                beat.date = row.date;
+            } else if (row.created_at) {
+                beat.date = new Date(row.created_at).toISOString();
+            }
 
-            // 4. Construction des Licences
+            // Gestion des tags (Text array Postgres -> JS Array)
+            if (row.tags) {
+                if (Array.isArray(row.tags)) beat.tags = row.tags;
+                else if (typeof row.tags === 'string') beat.tags = row.tags.split(',').map((t: string) => t.trim());
+            }
+
+            // 4. Construction des Licences à partir des colonnes de prix
+            // On initialise le tableau s'il n'existe pas ou on le complète
             let licenses = Array.isArray(beat.licenses) ? beat.licenses : [];
 
-            const addOrUpdateLicense = (type: string, price: any, name: string, features: string[]) => {
-                if (price === null || price === undefined) return;
-                const priceNum = Number(price);
-                if (isNaN(priceNum)) return;
-
-                const existingIndex = licenses.findIndex((l: any) => l.fileType === type);
-                
-                if (existingIndex >= 0) {
-                    licenses[existingIndex].price = priceNum;
-                } else {
-                    licenses.push({
-                        id: type.toLowerCase(),
-                        name,
-                        price: priceNum,
-                        fileType: type,
-                        features,
-                        streamsLimit: type === 'EXCLUSIVE' || type === 'TRACKOUT' || type === 'WAV' ? 'Unlimited' : 500000
-                    });
+            const addOrUpdateLicense = (type: string, priceVal: any, name: string, features: string[]) => {
+                const price = Number(priceVal);
+                if (!isNaN(price) && price > 0) {
+                    const existingIndex = licenses.findIndex((l: any) => l.fileType === type);
+                    if (existingIndex >= 0) {
+                        licenses[existingIndex].price = price;
+                    } else {
+                        licenses.push({
+                            id: type.toLowerCase(),
+                            name,
+                            price,
+                            fileType: type,
+                            features,
+                            streamsLimit: type === 'EXCLUSIVE' || type === 'TRACKOUT' || type === 'WAV' ? 'Unlimited' : 500000
+                        });
+                    }
                 }
             };
 
-            // Mappage des colonnes de prix
-            // On utilise price_lease comme fallback pour le MP3 si price_mp3 est vide
+            // Mapping des prix (price_lease est utilisé comme fallback pour MP3)
             const mp3Price = row.price_mp3 !== null ? row.price_mp3 : row.price_lease;
-            
-            if (mp3Price !== null) addOrUpdateLicense('MP3', mp3Price, 'MP3 Lease', ['MP3 Untagged', '500,000 Streams']);
-            if (row.price_wav) addOrUpdateLicense('WAV', row.price_wav, 'WAV Lease', ['WAV Untagged', 'Unlimited Streams']);
-            if (row.price_trackout) addOrUpdateLicense('TRACKOUT', row.price_trackout, 'Trackout Lease', ['All Stems (WAV)', 'Unlimited Streams']);
-            if (row.price_exclusive) addOrUpdateLicense('EXCLUSIVE', row.price_exclusive, 'Exclusive Rights', ['Full Ownership', 'Publishing 50/50']);
+            addOrUpdateLicense('MP3', mp3Price, 'MP3 Lease', ['MP3 Untagged', '500,000 Streams']);
+            addOrUpdateLicense('WAV', row.price_wav, 'WAV Lease', ['WAV Untagged', 'Unlimited Streams']);
+            addOrUpdateLicense('TRACKOUT', row.price_trackout, 'Trackout Lease', ['All Stems (WAV)', 'Unlimited Streams']);
+            addOrUpdateLicense('EXCLUSIVE', row.price_exclusive, 'Exclusive Rights', ['Full Ownership', 'Publishing 50/50']);
 
             beat.licenses = licenses;
 
-            // 5. Valeurs par défaut CRITIQUES pour l'affichage
-            if (!beat.title) beat.title = "Beat " + (row.id ? row.id.substring(0, 8) : "Inconnu");
+            // 5. Valeurs par défaut ultimes pour garantir l'affichage
+            if (!beat.title) beat.title = "Beat " + (row.id ? row.id.substring(row.id.length - 4) : "Inconnu");
             if (!beat.coverUrl) beat.coverUrl = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80";
             if (!beat.tags) beat.tags = [];
 
-            // Fallback licences si vide pour éviter une carte "non achetable"
+            // Fallback licences si toujours vide
             if (beat.licenses.length === 0) {
                  beat.licenses = [
                     { id: 'mp3', name: 'MP3 Lease', price: 29.99, fileType: 'MP3', features: ['MP3 Untagged', '500,000 Streams'], streamsLimit: 500000 },
                  ];
             }
 
-            // 6. Gestion Date
-            if (!beat.date) {
-                // Tentative extraction timestamp ID
-                if (beat.id && typeof beat.id === 'string' && beat.id.startsWith('beat-')) {
-                    const parts = beat.id.split('-');
-                    if (parts.length > 1) {
-                        const timestamp = parseInt(parts[1], 10);
-                        if (!isNaN(timestamp) && timestamp > 1600000000000) {
-                            beat.date = new Date(timestamp).toISOString();
-                        }
-                    }
-                }
-                // Si toujours pas de date, date du jour pour ne pas briser le tri
-                if (!beat.date) beat.date = new Date().toISOString();
-            }
+            // Fallback Date si toujours vide
+            if (!beat.date) beat.date = new Date().toISOString();
 
             return beat;
         } catch (e) {
-            console.error("Erreur parsing row:", e);
-            // On retourne un objet minimal fonctionnel en cas d'erreur
+            console.error("Erreur parsing row:", e, row);
+            // Retourne un objet minimal fonctionnel en cas de crash parsing
             return { 
                 id: row.id || 'unknown', 
                 title: "Erreur Données", 
@@ -165,15 +149,17 @@ export default async function handler(
       return response.status(200).json(enrichedBeats);
     }
 
-    // ... (Reste des méthodes POST/DELETE inchangées)
     if (request.method === 'POST') {
       const body = request.body;
       if (!body) return response.status(400).json({ error: 'Body invalide' });
       let beat = body.beat || body.data || body;
+      
       if (!beat.id) beat.id = `beat-${Date.now()}`;
       const beatId = beat.id;
       const beatJson = JSON.stringify(beat);
 
+      // Note: Pour l'instant on continue d'écrire dans la colonne 'data' JSONB.
+      // Une évolution future pourrait mapper les champs du body vers les colonnes individuelles.
       await sql`
         INSERT INTO beats (id, data) VALUES (${beatId}, ${beatJson}::jsonb)
         ON CONFLICT (id) DO UPDATE SET data = beats.data || ${beatJson}::jsonb;
