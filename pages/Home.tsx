@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
-import { FEATURED_BEATS, MASTERCLASSES, PROFILE_IMAGE_URL, ARTIST_NAME } from '../constants';
+import { MASTERCLASSES, ARTIST_NAME } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap } from 'lucide-react';
+import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { getAllBeats } from '../services/dbService';
 import { Beat } from '../types';
@@ -11,37 +11,44 @@ import { Beat } from '../types';
 export const Home: React.FC = () => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
   const navigate = useNavigate();
-  const [displayBeats, setDisplayBeats] = useState<Beat[]>(FEATURED_BEATS);
+  // État initial vide, plus de FEATURED_BEATS par défaut
+  const [displayBeats, setDisplayBeats] = useState<Beat[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Chargement des beats depuis la DB pour afficher les nouveautés réelles
+  // Chargement des beats UNIQUEMENT depuis la DB
   useEffect(() => {
     const fetchHomeBeats = async () => {
       try {
         const dbBeats = await getAllBeats();
         if (Array.isArray(dbBeats) && dbBeats.length > 0) {
-          // Filtrage pour ne garder que les beats valides (avec un titre et un ID)
-          const validDbBeats = dbBeats.filter(b => b && b.id && b.title);
+          // Filtrage pour ne garder que les beats valides (au moins un titre)
+          // Note: l'ID est géré par l'API, mais on vérifie quand même 'b'
+          const validDbBeats = dbBeats.filter(b => b && b.title);
           
-          // On combine les beats DB (prioritaires, inversés pour avoir les plus récents) et les beats par défaut
-          const combined = [...[...validDbBeats].reverse(), ...FEATURED_BEATS];
-          setDisplayBeats(combined.slice(0, 4));
+          // On prend les plus récents (inverse) et on limite à 4
+          setDisplayBeats([...validDbBeats].reverse().slice(0, 4));
+        } else {
+          setDisplayBeats([]);
         }
       } catch (error) {
         console.error("Erreur chargement beats home:", error);
+        setDisplayBeats([]);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchHomeBeats();
   }, []);
 
   // Le beat mis en avant est le tout premier de la liste (le plus récent)
-  const featuredBeat = displayBeats[0];
+  const featuredBeat = displayBeats.length > 0 ? displayBeats[0] : null;
 
   const handlePlayFeatured = (e: React.MouseEvent) => {
     e.preventDefault();
     if (featuredBeat) playBeat(featuredBeat);
   };
 
-  const isFeaturedPlaying = isPlaying && currentBeat?.id === featuredBeat?.id;
+  const isFeaturedPlaying = isPlaying && featuredBeat && currentBeat?.id === featuredBeat.id;
 
   return (
     <div className="flex flex-col gap-12 pb-24">
@@ -50,7 +57,7 @@ export const Home: React.FC = () => {
       <section className="relative h-[500px] rounded-[2.5rem] overflow-hidden group border border-[#2a2a2a] shadow-2xl">
         {/* Image de fond : Studio d'enregistrement ambiance Afrobeat / Chaleureuse */}
         <img 
-          src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop" 
+          src={featuredBeat?.coverUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop"} 
           alt="Afrobeat Recording Studio" 
           className="absolute inset-0 w-full h-full object-cover opacity-60 saturate-[1.1] transition-transform duration-1000 group-hover:scale-105"
         />
@@ -71,17 +78,24 @@ export const Home: React.FC = () => {
                 </p>
 
                 <div className="flex flex-wrap justify-center gap-4">
-                  <button 
-                    onClick={handlePlayFeatured} 
-                    className="bg-white text-black font-black px-12 py-5 rounded-2xl hover:bg-amber-500 transition-all flex items-center gap-3 uppercase text-sm shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 group/btn"
-                  >
-                      {isFeaturedPlaying ? (
-                        <div className="flex gap-1 items-end h-4">
-                          {[1,2,3].map(i => <div key={i} className="w-1 bg-black animate-pulse" style={{height: `${i*33}%`}}></div>)}
-                        </div>
-                      ) : <Play className="w-5 h-5 fill-current group-hover/btn:scale-125 transition-transform" />}
-                      {isFeaturedPlaying ? 'EN LECTURE' : 'Écouter le dernier Beat'}
-                  </button>
+                  {featuredBeat ? (
+                    <button 
+                      onClick={handlePlayFeatured} 
+                      className="bg-white text-black font-black px-12 py-5 rounded-2xl hover:bg-amber-500 transition-all flex items-center gap-3 uppercase text-sm shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 group/btn"
+                    >
+                        {isFeaturedPlaying ? (
+                          <div className="flex gap-1 items-end h-4">
+                            {[1,2,3].map(i => <div key={i} className="w-1 bg-black animate-pulse" style={{height: `${i*33}%`}}></div>)}
+                          </div>
+                        ) : <Play className="w-5 h-5 fill-current group-hover/btn:scale-125 transition-transform" />}
+                        {isFeaturedPlaying ? 'EN LECTURE' : `Écouter : ${featuredBeat.title}`}
+                    </button>
+                  ) : (
+                    <button className="bg-white/10 text-white font-black px-12 py-5 rounded-2xl cursor-default border border-white/10 uppercase text-sm">
+                        Studio en préparation
+                    </button>
+                  )}
+                  
                   <Link 
                     to="/masterclass" 
                     className="bg-black/60 backdrop-blur-md text-white font-black px-10 py-5 rounded-2xl hover:bg-white hover:text-black transition-all border border-white/20 uppercase text-sm flex items-center gap-2 active:scale-95"
@@ -144,15 +158,26 @@ export const Home: React.FC = () => {
             Derniers <span className="text-amber-500">Beats</span> mis en ligne
           </h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayBeats.map((beat) => (
-            <BeatCard 
-              key={beat.id} 
-              beat={beat} 
-              onPurchase={() => navigate('/beats')} 
-            />
-          ))}
-        </div>
+        
+        {displayBeats.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {displayBeats.map((beat) => (
+                <BeatCard 
+                  key={beat.id} 
+                  beat={beat} 
+                  onPurchase={() => navigate('/beats')} 
+                />
+              ))}
+            </div>
+        ) : (
+            <div className="py-20 text-center border-2 border-dashed border-[#2a2a2a] rounded-[2rem] flex flex-col items-center justify-center opacity-50">
+                <Music className="w-12 h-12 mb-4 text-[#5c4a3e]" />
+                <p className="text-lg font-bold text-[#8c7a6b]">
+                    {isLoading ? "Chargement du catalogue..." : "Aucune production disponible pour le moment"}
+                </p>
+                {!isLoading && <p className="text-sm italic text-[#5c4a3e] mt-2">Revenez très vite pour de nouvelles pépites !</p>}
+            </div>
+        )}
       </section>
     </div>
   );

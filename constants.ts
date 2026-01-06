@@ -21,30 +21,8 @@ export const STANDARD_LICENSES: License[] = [
   { id: 'exclusive', name: 'Exclusive Rights', price: 499.99, fileType: 'EXCLUSIVE', features: ['Full Ownership', 'Publishing 50/50'], streamsLimit: 'Unlimited' }
 ];
 
-export const FEATURED_BEATS: Beat[] = [
-  {
-    id: 'demo-1',
-    title: 'AMOUR | Afro Love Type Beat',
-    bpm: 105,
-    key: 'C Minor',
-    tags: ['Tayc', 'Afro', 'Love'],
-    coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500&auto=format&fit=crop&q=60',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-    licenses: STANDARD_LICENSES,
-    youtubeId: 'dQw4w9WgXcQ'
-  },
-  {
-    id: 'demo-2',
-    title: 'PRINCE | Afro Love Instrumental',
-    bpm: 95,
-    key: 'F# Major',
-    tags: ['Afro', 'Fabio'],
-    coverUrl: 'https://images.unsplash.com/photo-1514525253361-bee8a187499b?w=500&auto=format&fit=crop&q=60',
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-    licenses: STANDARD_LICENSES,
-    youtubeId: 'dQw4w9WgXcQ'
-  }
-];
+// ON VIDE LES EXEMPLES POUR NE PLUS LES AFFICHER
+export const FEATURED_BEATS: Beat[] = [];
 
 export const MASTERCLASSES: Masterclass[] = [
   { 
