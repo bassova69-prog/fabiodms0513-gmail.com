@@ -8,8 +8,15 @@ const FALLBACK_PREFIX = 'fabio_data_';
 // --- GENERIC HELPERS WITH FALLBACK ---
 async function fetchItems<T>(endpoint: string): Promise<T[]> {
   try {
-    // Tentative de connexion API (Neon DB)
-    const res = await fetch(`/api/${endpoint}?t=${Date.now()}`);
+    // Tentative de connexion API (Neon DB) avec cache busting strict
+    const res = await fetch(`/api/${endpoint}?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache'
+        }
+    });
+    
     if (!res.ok) throw new Error(`API Error ${res.status}`);
     
     const data = await res.json();
@@ -67,7 +74,7 @@ async function deleteItem(endpoint: string, id: string): Promise<void> {
 // --- CONNECTION CHECK ---
 export const checkConnection = async (): Promise<{ success: boolean; message: string; mode: 'CLOUD' | 'LOCAL' }> => {
   try {
-    const res = await fetch(`/api/beats?limit=1&t=${Date.now()}`);
+    const res = await fetch(`/api/beats?limit=1&t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       return { success: true, message: "Base de Données Neon Connectée", mode: 'CLOUD' };
     }
@@ -104,7 +111,7 @@ export const deleteEvent = (id: string) => deleteItem('events', id);
 // --- SETTINGS ---
 export const getSetting = async <T>(key: string): Promise<T | null> => {
   try {
-    const res = await fetch(`/api/settings?key=${key}&t=${Date.now()}`);
+    const res = await fetch(`/api/settings?key=${key}&t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
         const val = await res.json();
         localStorage.setItem(FALLBACK_PREFIX + 'setting_' + key, JSON.stringify(val));

@@ -9,138 +9,114 @@ export default async function handler(
   response: VercelResponse,
 ) {
   const sql = neon(DB_URL);
+  
+  // DÉSACTIVATION STRICTE DU CACHE
+  response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.setHeader('Pragma', 'no-cache');
+  response.setHeader('Expires', '0');
 
   try {
-    await sql`CREATE TABLE IF NOT EXISTS beats (
-      id TEXT PRIMARY KEY,
-      data JSONB
-    );`;
+    // 1. Initialisation de la table
+    await sql`CREATE TABLE IF NOT EXISTS beats (id TEXT PRIMARY KEY, data JSONB)`;
+    
+    // 2. Migration Auto : Création des colonnes SQL si elles manquent
+    // Cela garantit que les champs existent pour être lus/écrits
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS title TEXT`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS bpm INTEGER`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS cover_url TEXT`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS mp3_url TEXT`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS wav_url TEXT`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS stems_url TEXT`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS youtube_id TEXT`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS tags TEXT[]`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS price_mp3 NUMERIC`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS price_wav NUMERIC`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS price_trackout NUMERIC`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS price_exclusive NUMERIC`;
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`;
 
     if (request.method === 'GET') {
       const { limit } = request.query;
       
       let rows;
       if (limit && !isNaN(Number(limit))) {
-        rows = await sql`SELECT * FROM beats LIMIT ${Number(limit)}`;
+        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
       } else {
-        rows = await sql`SELECT * FROM beats`;
+        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
       }
       
       const enrichedBeats = rows.map((row) => {
         try {
-            // DÉTECTION DU TITRE (Uniquement via colonnes SQL)
-            const detectedTitle = row.title || row.name || row.nom || row.titre || "Sans titre";
+            // Lecture exclusive des colonnes SQL
+            const title = row.title || "Sans titre";
+            
+            // Gestion safe des tags (parfois retournés en string postgres "{a,b}")
+            let tags: string[] = [];
+            if (Array.isArray(row.tags)) {
+                tags = row.tags;
+            } else if (typeof row.tags === 'string') {
+                // Nettoyage du format {tag1,tag2} si nécessaire
+                tags = row.tags.replace(/^{|}$/g, '').split(',').map((s:string) => s.trim()).filter(Boolean);
+            }
 
-            // DÉTECTION DE LA COVER (Uniquement via colonnes SQL)
-            const detectedCover = row.cover_url || row.cover || row.image || row.image_url || 
-                                  "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80";
-
-            // On crée l'objet beat
             const beat: any = {
                 id: row.id,
-                title: detectedTitle,
+                title: title,
                 bpm: row.bpm ? Number(row.bpm) : null,
-                coverUrl: detectedCover,
-                date: row.date || (row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString()),
+                coverUrl: row.cover_url || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80",
+                date: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
                 
-                // URLs Audio (Uniquement via colonnes SQL)
                 mp3Url: row.mp3_url || null,
                 wavUrl: row.wav_url || null,
                 stemsUrl: row.stems_url || null,
-                youtubeId: row.youtube_id || null
+                youtubeId: row.youtube_id || null,
+                tags: tags
             };
 
-            // Gestion des tags
-            let rawTags = row.tags;
-            if (rawTags) {
-                if (Array.isArray(rawTags)) {
-                    beat.tags = rawTags;
-                } else if (typeof rawTags === 'string') {
-                    beat.tags = rawTags.split(',').map((t: string) => t.trim());
-                } else {
-                    beat.tags = [];
-                }
-            } else {
-                beat.tags = [];
-            }
-
-            // Reconstruction des licences (Colonnes SQL uniquement)
+            // Reconstruction des licences depuis les colonnes de prix
             const licenses = [];
             
-            // MP3
-            const pMp3 = row.price_mp3 || row.price_lease || row.mp3_price;
-            if (pMp3) {
+            if (row.price_mp3) {
                 licenses.push({
-                    id: 'mp3',
-                    name: 'MP3 Lease',
-                    price: Number(pMp3),
-                    fileType: 'MP3',
-                    features: ['MP3 Untagged', '500,000 Streams'],
-                    streamsLimit: 500000
+                    id: 'mp3', name: 'MP3 Lease', price: Number(row.price_mp3),
+                    fileType: 'MP3', features: ['MP3 Untagged', '500,000 Streams'], streamsLimit: 500000
                 });
-            }
-
-            // WAV
-            const pWav = row.price_wav || row.wav_price;
-            if (pWav) {
-                licenses.push({
-                    id: 'wav',
-                    name: 'WAV Lease',
-                    price: Number(pWav),
-                    fileType: 'WAV',
-                    features: ['WAV Untagged', 'Unlimited Streams'],
-                    streamsLimit: 'Unlimited'
-                });
-            }
-
-            // TRACKOUT
-            const pTrackout = row.price_trackout || row.trackout_price;
-            if (pTrackout) {
-                licenses.push({
-                    id: 'trackout',
-                    name: 'Trackout Lease',
-                    price: Number(pTrackout),
-                    fileType: 'TRACKOUT',
-                    features: ['All Stems (WAV)', 'Unlimited Streams'],
-                    streamsLimit: 'Unlimited'
-                });
-            }
-
-            // EXCLUSIVE
-            const pExclu = row.price_exclusive || row.exclusive_price;
-            if (pExclu) {
-                licenses.push({
-                    id: 'exclusive',
-                    name: 'Exclusive Rights',
-                    price: Number(pExclu),
-                    fileType: 'EXCLUSIVE',
-                    features: ['Full Ownership', 'Publishing 50/50'],
-                    streamsLimit: 'Unlimited'
-                });
-            }
-
-            // Fallback ultime si aucune licence trouvée (pour affichage propre)
-            if (licenses.length === 0) {
+            } else {
+                // Fallback display par défaut
                  licenses.push({
-                    id: 'mp3',
-                    name: 'MP3 Lease',
-                    price: 29.99,
-                    fileType: 'MP3',
-                    features: ['MP3 Untagged', '500,000 Streams'],
-                    streamsLimit: 500000
-                 });
+                    id: 'mp3', name: 'MP3 Lease', price: 29.99,
+                    fileType: 'MP3', features: ['MP3 Untagged', '500,000 Streams'], streamsLimit: 500000
+                });
+            }
+
+            if (row.price_wav) {
+                licenses.push({
+                    id: 'wav', name: 'WAV Lease', price: Number(row.price_wav),
+                    fileType: 'WAV', features: ['WAV Untagged', 'Unlimited Streams'], streamsLimit: 'Unlimited'
+                });
+            }
+
+            if (row.price_trackout) {
+                licenses.push({
+                    id: 'trackout', name: 'Trackout Lease', price: Number(row.price_trackout),
+                    fileType: 'TRACKOUT', features: ['All Stems (WAV)', 'Unlimited Streams'], streamsLimit: 'Unlimited'
+                });
+            }
+
+            if (row.price_exclusive) {
+                licenses.push({
+                    id: 'exclusive', name: 'Exclusive Rights', price: Number(row.price_exclusive),
+                    fileType: 'EXCLUSIVE', features: ['Full Ownership', 'Publishing 50/50'], streamsLimit: 'Unlimited'
+                });
             }
             
             beat.licenses = licenses;
-
             return beat;
         } catch (e) {
             console.error("Erreur mapping row:", e);
             return null;
         }
       }).filter(Boolean);
-
-      enrichedBeats.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       return response.status(200).json(enrichedBeats);
     }
@@ -152,15 +128,52 @@ export default async function handler(
       let beat = body.beat || body.data || body;
       
       if (!beat.id) beat.id = `beat-${Date.now()}`;
-      const beatId = beat.id;
       
+      // Préparation des valeurs pour les colonnes SQL
+      const title = beat.title || "Sans titre";
+      const bpm = beat.bpm ? Number(beat.bpm) : 0;
+      const coverUrl = beat.coverUrl || "";
+      const mp3Url = beat.mp3Url || "";
+      const wavUrl = beat.wavUrl || "";
+      const stemsUrl = beat.stemsUrl || "";
+      const youtubeId = beat.youtubeId || "";
+      // Conversion tags tableau -> format compatible
+      const tags = Array.isArray(beat.tags) ? beat.tags : [];
+      
+      const pMp3 = beat.price_mp3 || 29.99;
+      const pWav = beat.price_wav || 49.99;
+      const pTrackout = beat.price_trackout || 99.99;
+      const pExclu = beat.price_exclusive || 499.99;
+
+      // On garde aussi le JSON en backup dans la colonne data
       const beatJson = JSON.stringify(beat);
 
       await sql`
-        INSERT INTO beats (id, data) VALUES (${beatId}, ${beatJson}::jsonb)
-        ON CONFLICT (id) DO UPDATE SET data = beats.data || ${beatJson}::jsonb;
+        INSERT INTO beats (
+            id, title, bpm, cover_url, mp3_url, wav_url, stems_url, youtube_id, tags,
+            price_mp3, price_wav, price_trackout, price_exclusive, 
+            data, created_at
+        ) VALUES (
+            ${beat.id}, ${title}, ${bpm}, ${coverUrl}, ${mp3Url}, ${wavUrl}, ${stemsUrl}, ${youtubeId}, ${tags},
+            ${pMp3}, ${pWav}, ${pTrackout}, ${pExclu},
+            ${beatJson}::jsonb, NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            bpm = EXCLUDED.bpm,
+            cover_url = EXCLUDED.cover_url,
+            mp3_url = EXCLUDED.mp3_url,
+            wav_url = EXCLUDED.wav_url,
+            stems_url = EXCLUDED.stems_url,
+            youtube_id = EXCLUDED.youtube_id,
+            tags = EXCLUDED.tags,
+            price_mp3 = EXCLUDED.price_mp3,
+            price_wav = EXCLUDED.price_wav,
+            price_trackout = EXCLUDED.price_trackout,
+            price_exclusive = EXCLUDED.price_exclusive,
+            data = EXCLUDED.data;
       `;
-      return response.status(200).json({ success: true, id: beatId });
+      return response.status(200).json({ success: true, id: beat.id });
     }
 
     if (request.method === 'DELETE') {
