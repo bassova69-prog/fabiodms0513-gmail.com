@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
-import { MASTERCLASSES, ARTIST_NAME } from '../constants';
+import { ARTIST_NAME } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music } from 'lucide-react';
+import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, User, Video } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { getAllBeats } from '../services/dbService';
 import { Beat } from '../types';
@@ -11,27 +11,21 @@ import { Beat } from '../types';
 export const Home: React.FC = () => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
   const navigate = useNavigate();
-  // État initial vide, plus de FEATURED_BEATS par défaut
   const [displayBeats, setDisplayBeats] = useState<Beat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Chargement des beats UNIQUEMENT depuis la DB
   useEffect(() => {
     const fetchHomeBeats = async () => {
       try {
         const dbBeats = await getAllBeats();
         if (Array.isArray(dbBeats) && dbBeats.length > 0) {
-          // Filtrage minimal : on accepte tout objet qui ressemble à un beat
           const validDbBeats = dbBeats.filter(b => b && typeof b === 'object');
-          
-          // On prend les 4 premiers (l'API les renvoie déjà triés par date décroissante)
           setDisplayBeats(validDbBeats.slice(0, 4));
         } else {
           setDisplayBeats([]);
         }
       } catch (error) {
         console.error("Erreur chargement beats home:", error);
-        setDisplayBeats([]);
       } finally {
         setIsLoading(false);
       }
@@ -39,7 +33,6 @@ export const Home: React.FC = () => {
     fetchHomeBeats();
   }, []);
 
-  // Le beat mis en avant est le tout premier de la liste (le plus récent)
   const featuredBeat = displayBeats.length > 0 ? displayBeats[0] : null;
 
   const handlePlayFeatured = (e: React.MouseEvent) => {
@@ -50,111 +43,161 @@ export const Home: React.FC = () => {
   const isFeaturedPlaying = isPlaying && featuredBeat && currentBeat?.id === featuredBeat.id;
 
   return (
-    <div className="flex flex-col gap-12 pb-24">
+    <div className="flex flex-col gap-14 pb-24">
       
-      {/* SECTION BANNIÈRE YOUTUBE STYLE */}
-      <section className="relative h-[500px] rounded-[2.5rem] overflow-hidden group border border-[#2a2a2a] shadow-2xl">
-        {/* Image de fond : Studio d'enregistrement ambiance Afrobeat / Chaleureuse */}
+      {/* SECTION BANNIÈRE - STYLE STUDIO PRO */}
+      <section className="relative h-[450px] md:h-[500px] rounded-[2rem] overflow-hidden group shadow-2xl border border-[#2a2a2a]">
         <img 
           src={featuredBeat?.coverUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop"} 
-          alt="Afrobeat Recording Studio" 
+          alt="Studio Banner" 
           className="absolute inset-0 w-full h-full object-cover opacity-60 saturate-[1.1] transition-transform duration-1000 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/40 to-transparent"></div>
         
-        {/* Motifs géométriques subtils */}
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/az-subtle.png')] pointer-events-none"></div>
-
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-           <div className="animate-in slide-in-from-bottom-4 duration-700 relative z-10">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl">
-                      {ARTIST_NAME}
-                    </h1>
-                </div>
-                <p className="text-amber-500 font-black uppercase tracking-[0.4em] text-xs md:text-base mb-10 bg-black/40 backdrop-blur-sm px-4 py-1 rounded-full inline-block border border-amber-500/20">
-                   <Zap className="w-4 h-4 inline mr-2 animate-pulse" /> Platinum Beatmaker • Afro Love
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-10">
+           <div className="animate-in slide-in-from-bottom-6 duration-700">
+                <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl mb-2">
+                  {ARTIST_NAME}
+                </h1>
+                <p className="text-xl md:text-2xl text-amber-500 font-bold uppercase tracking-[0.3em] mb-8 drop-shadow-lg">
+                   Beatmaker & Producer
                 </p>
 
-                <div className="flex flex-wrap justify-center gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   {featuredBeat ? (
                     <button 
                       onClick={handlePlayFeatured} 
-                      className="bg-white text-black font-black px-12 py-5 rounded-2xl hover:bg-amber-500 transition-all flex items-center gap-3 uppercase text-sm shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 group/btn"
+                      className="bg-white text-black font-black px-8 py-4 rounded-xl hover:bg-amber-500 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95 group/btn"
                     >
                         {isFeaturedPlaying ? (
                           <div className="flex gap-1 items-end h-4">
                             {[1,2,3].map(i => <div key={i} className="w-1 bg-black animate-pulse" style={{height: `${i*33}%`}}></div>)}
                           </div>
                         ) : <Play className="w-5 h-5 fill-current group-hover/btn:scale-125 transition-transform" />}
-                        {isFeaturedPlaying ? 'EN LECTURE' : `Écouter : ${featuredBeat.title || 'Dernier Beat'}`}
+                        {isFeaturedPlaying ? 'EN LECTURE' : 'ÉCOUTER MAINTENANT'}
                     </button>
                   ) : (
-                    <button className="bg-white/10 text-white font-black px-12 py-5 rounded-2xl cursor-default border border-white/10 uppercase text-sm">
-                        Studio en préparation
+                    <button onClick={() => navigate('/beats')} className="bg-white text-black font-black px-8 py-4 rounded-xl hover:bg-amber-500 transition-colors uppercase text-xs tracking-widest">
+                       VOIR LE CATALOGUE
                     </button>
                   )}
                   
                   <Link 
                     to="/masterclass" 
-                    className="bg-black/60 backdrop-blur-md text-white font-black px-10 py-5 rounded-2xl hover:bg-white hover:text-black transition-all border border-white/20 uppercase text-sm flex items-center gap-2 active:scale-95"
+                    className="bg-black/60 backdrop-blur-md text-white font-black px-8 py-4 rounded-xl hover:bg-white hover:text-black transition-all border border-white/20 uppercase text-xs tracking-widest flex items-center justify-center gap-2 active:scale-95"
                   >
-                      <GraduationCap className="w-5 h-5" /> Masterclasses
+                      <GraduationCap className="w-5 h-5" /> MASTERCLASS
                   </Link>
                 </div>
            </div>
         </div>
       </section>
 
-      {/* TARIFS BEATMAKING */}
+      {/* TARIFS BEATMAKING - GRID PRO */}
       <section className="px-2">
-        <div className="flex items-center justify-between mb-10">
-            <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">
-              Tarifs <span className="text-amber-500">prod</span> Beat
+        <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
+            <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
+              <Headphones className="w-8 h-8 text-amber-500" /> Licences & Tarifs
             </h2>
-            <Link to="/beats" className="text-amber-500 font-bold flex items-center gap-1 hover:underline text-sm uppercase tracking-widest">
-               Catalogue complet <ChevronRight className="w-4 h-4" />
+            <Link to="/beats" className="text-[#8c7a6b] hover:text-white font-bold text-xs uppercase tracking-widest flex items-center gap-1 transition-colors">
+               Tout voir <ChevronRight className="w-4 h-4" />
             </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-                { name: 'MP3 LEASE', price: '29.99', icon: <Headphones className="text-blue-400" />, features: ['MP3 Untagged', '500k Streams', 'Usage Commercial'] },
-                { name: 'WAV LEASE', price: '49.99', icon: <Music4 className="text-cyan-400" />, features: ['WAV + MP3 High Res', 'Unlimited Streams', 'Radio Ready'] },
-                { name: 'TRACKOUT', price: '99.99', icon: <Layers className="text-orange-400" />, features: ['Stems séparées (Vocal mix ready)', 'Unlimited Streams', 'Idéal pour Studio'] },
-                { name: 'EXCLUSIF', price: 'Sur devis', icon: <Crown className="text-amber-500" />, features: ['Contrat de cession unique', 'Retiré de la vente', 'Production sur mesure'] },
+                { name: 'MP3 LEASE', price: '29.99', icon: <Music className="text-blue-400" />, features: ['MP3 Untagged', '500k Streams', 'Usage Commercial'] },
+                { name: 'WAV LEASE', price: '49.99', icon: <Music4 className="text-cyan-400" />, features: ['WAV + MP3', 'Unlimited Streams', 'Radio Ready'] },
+                { name: 'TRACKOUT', price: '99.99', icon: <Layers className="text-orange-400" />, features: ['Stems (Pistes séparées)', 'Unlimited Streams', 'Idéal Studio'] },
+                { name: 'EXCLUSIF', price: 'Sur devis', icon: <Crown className="text-amber-500" />, features: ['Droits exclusifs', 'Retrait du catalogue', 'Publishing 50/50'] },
             ].map((tier, i) => (
-                <div key={i} className="p-8 rounded-[2rem] bg-[#121212] border border-[#2a2a2a] hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-500/5 transition-all flex flex-col justify-between h-full group">
+                <div key={i} className="p-6 rounded-2xl bg-[#121212] border border-[#2a2a2a] hover:border-amber-500/30 transition-all flex flex-col justify-between group h-full hover:-translate-y-1">
                     <div>
-                        <div className="mb-6 bg-[#1a1a1a] w-14 h-14 rounded-2xl flex items-center justify-center border border-[#2a2a2a] group-hover:scale-110 transition-transform shadow-lg">{tier.icon}</div>
-                        <h3 className="font-black text-xl text-white uppercase mb-2 tracking-tight">{tier.name}</h3>
-                        <div className="text-3xl font-black text-amber-500 mb-8 flex items-baseline gap-1">
-                          {tier.price}{tier.price.includes('.') ? <span className="text-lg">€</span> : ''}
+                        <div className="flex justify-between items-start mb-4">
+                           <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] flex items-center justify-center border border-[#3d2b1f]">
+                              {tier.icon}
+                           </div>
+                           <span className="text-2xl font-black text-white">{tier.price}<span className="text-sm align-top">€</span></span>
                         </div>
-                        <ul className="space-y-4 mb-10">
+                        <h3 className="font-black text-lg text-[#fff8f0] uppercase mb-4 tracking-tight">{tier.name}</h3>
+                        <ul className="space-y-2 mb-6">
                            {tier.features.map((f, idx) => (
-                             <li key={idx} className="text-[10px] text-[#8c7a6b] font-black uppercase tracking-widest flex items-center gap-3">
-                               <div className="w-1.5 h-1.5 rounded-full bg-amber-500/60 shadow-[0_0_5px_rgba(245,158,11,0.5)]"></div> {f}
+                             <li key={idx} className="text-[10px] text-[#8c7a6b] font-bold uppercase tracking-wide flex items-center gap-2">
+                               <div className="w-1 h-1 rounded-full bg-amber-500"></div> {f}
                              </li>
                            ))}
                         </ul>
                     </div>
                     <button 
                       onClick={() => navigate('/beats')} 
-                      className="w-full py-4 rounded-xl bg-[#1a1a1a] text-white font-black uppercase text-xs hover:bg-amber-600 hover:text-black transition-all border border-[#2a2a2a] hover:border-transparent active:scale-95 shadow-md"
+                      className="w-full py-3 rounded-lg bg-[#1a1a1a] text-white font-black uppercase text-[10px] hover:bg-white hover:text-black transition-all border border-[#2a2a2a] hover:border-transparent active:scale-95"
                     >
-                      Commander
+                      Choisir
                     </button>
                 </div>
             ))}
         </div>
       </section>
 
-      {/* DERNIÈRES PRODUCTIONS */}
+      {/* MASTERCLASS SECTION */}
       <section className="px-2">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter">
-            Derniers <span className="text-amber-500">Beats</span> mis en ligne
+        <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
+            <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
+              <GraduationCap className="w-8 h-8 text-emerald-500" /> Formation
+            </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {/* CARTE MASTERCLASS 1 */}
+             <div className="relative rounded-[2rem] overflow-hidden border border-[#2a2a2a] bg-[#121212] flex flex-col md:flex-row group">
+                <div className="p-8 flex flex-col h-full w-full">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="w-12 h-12 bg-emerald-900/20 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                             <User className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase">Populaire</span>
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-2 uppercase italic">Mentorat Privé</h3>
+                    <p className="text-[#a89080] text-sm mb-6">
+                        2 heures de coaching 1-on-1. Analyse de tes prods, mixage et conseils carrière personnalisés.
+                    </p>
+                    <div className="flex items-center justify-between mt-auto pt-6 border-t border-[#2a2a2a]">
+                        <span className="text-2xl font-black text-white">149€</span>
+                        <button className="bg-emerald-600 text-white font-black px-6 py-2.5 rounded-lg text-xs uppercase hover:bg-emerald-500 transition-colors">
+                            Réserver
+                        </button>
+                    </div>
+                </div>
+             </div>
+
+             {/* CARTE MASTERCLASS 2 */}
+             <div className="relative rounded-[2rem] overflow-hidden border border-[#2a2a2a] bg-[#121212] flex flex-col md:flex-row group">
+                <div className="p-8 flex flex-col h-full w-full">
+                     <div className="flex justify-between items-start mb-4">
+                        <div className="w-12 h-12 bg-amber-900/20 rounded-xl flex items-center justify-center border border-amber-500/20">
+                             <Video className="w-6 h-6 text-amber-500" />
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-2 uppercase italic">Pack Formation Vidéo</h3>
+                    <p className="text-[#a89080] text-sm mb-6">
+                        Accès immédiat à 10h de vidéos. Apprends mes techniques de composition pour les placements Afro/Pop.
+                    </p>
+                    <div className="flex items-center justify-between mt-auto pt-6 border-t border-[#2a2a2a]">
+                        <span className="text-2xl font-black text-white">97€</span>
+                        <button onClick={() => navigate('/masterclass')} className="bg-white text-black font-black px-6 py-2.5 rounded-lg text-xs uppercase hover:bg-amber-500 transition-colors">
+                            Voir le programme
+                        </button>
+                    </div>
+                </div>
+             </div>
+        </div>
+      </section>
+
+      {/* SECTION DERNIERS BEATS */}
+      <section className="px-2">
+        <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
+          <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
+            <Zap className="w-8 h-8 text-amber-500" /> Nouveautés
           </h2>
         </div>
         
@@ -174,7 +217,6 @@ export const Home: React.FC = () => {
                 <p className="text-lg font-bold text-[#8c7a6b]">
                     {isLoading ? "Chargement du catalogue..." : "Aucune production disponible pour le moment"}
                 </p>
-                {!isLoading && <p className="text-sm italic text-[#5c4a3e] mt-2">Revenez très vite pour de nouvelles pépites !</p>}
             </div>
         )}
       </section>
