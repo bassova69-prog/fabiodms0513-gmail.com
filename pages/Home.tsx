@@ -18,15 +18,14 @@ export const Home: React.FC = () => {
     const fetchHomeBeats = async () => {
       try {
         const dbBeats = await getAllBeats();
-        // SÉCURITÉ : On vérifie que dbBeats est bien un tableau
-        if (Array.isArray(dbBeats) && dbBeats.length > 0) {
+        if (dbBeats && dbBeats.length > 0) {
           // On combine les beats DB (prioritaires, inversés pour avoir les plus récents) et les beats par défaut
+          // On prend les 4 premiers pour l'affichage
           const combined = [...[...dbBeats].reverse(), ...FEATURED_BEATS];
           setDisplayBeats(combined.slice(0, 4));
         }
       } catch (error) {
         console.error("Erreur chargement beats home:", error);
-        // En cas d'erreur, on reste sur les FEATURED_BEATS par défaut
       }
     };
     fetchHomeBeats();

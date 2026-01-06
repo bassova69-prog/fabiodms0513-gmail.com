@@ -14,16 +14,7 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
     }
     const contentType = res.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) return [];
-    
-    const data = await res.json();
-    
-    // CRUCIAL : On vérifie que c'est bien un tableau pour éviter le crash "is not iterable"
-    if (!Array.isArray(data)) {
-        console.warn(`[DB] Expected array from ${endpoint}, got:`, data);
-        return [];
-    }
-    
-    return data;
+    return await res.json();
   } catch (e) {
     console.warn(`[DB] Network error for ${endpoint}:`, e);
     return [];

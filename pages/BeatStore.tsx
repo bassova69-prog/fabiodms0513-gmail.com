@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { FEATURED_BEATS } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
@@ -11,62 +11,47 @@ import { usePlayer } from '../contexts/PlayerContext';
 export const BeatStore: React.FC = () => {
   const { cartCount, toggleCart, addToCart } = useCart();
   const { playBeat } = usePlayer();
-  const [searchParams] = useSearchParams();
-
   const [beats, setBeats] = useState<Beat[]>([]);
   const [filteredBeats, setFilteredBeats] = useState<Beat[]>([]);
   const [promo, setPromo] = useState<StorePromotion | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // État pour gérer la modale d'achat
   const [selectedBeatForPurchase, setSelectedBeatForPurchase] = useState<Beat | null>(null);
 
-  // Chargement des beats (UNIQUEMENT NEON)
+  // Fonction pour charger les beats (une seule fois ou sur demande explicite)
   const loadBeats = async () => {
     try {
       const savedCustomBeats = await getAllBeats();
-      
-      // SÉCURITÉ : On s'assure que c'est bien un tableau
-      if (Array.isArray(savedCustomBeats)) {
-        const allBeats = [...savedCustomBeats].reverse();
-        setBeats(allBeats);
-        setFilteredBeats(prev => {
-          if (searchTerm) return prev; 
-          return allBeats;
-        });
-      } else {
-        setBeats([]);
-        setFilteredBeats([]);
-      }
+      const allBeats = [...[...savedCustomBeats].reverse(), ...FEATURED_BEATS];
+      setBeats(allBeats);
+      setFilteredBeats(prev => {
+        // Garder le filtre actuel si une recherche est en cours
+        if (searchTerm) return prev; 
+        return allBeats;
+      });
     } catch (e) {
       console.error("Error loading beats:", e);
-      setBeats([]);
-      setFilteredBeats([]);
+      setBeats(FEATURED_BEATS);
+      setFilteredBeats(FEATURED_BEATS);
     }
   };
 
+  // Fonction spécifique pour vérifier la promo (sera appelée régulièrement)
   const checkPromo = useCallback(async () => {
-    // 1. Vérification URL
-    const urlPromoMessage = searchParams.get('promo');
+    // A. Vérification URL (Prioritaire pour test)
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const urlPromoMessage = params.get('promo');
     
     if (urlPromoMessage) {
-        const urlPromoBG = searchParams.get('bg');
-        const urlPct = searchParams.get('pct') || searchParams.get('percent') || searchParams.get('discount') || searchParams.get('val') || searchParams.get('value'); 
-        const urlIds = searchParams.get('ids'); 
-        
-        setPromo({
-          isActive: true,
-          message: urlPromoMessage,
-          discountPercentage: urlPct ? parseInt(urlPct) : 20,
-          type: (urlPromoBG === 'orange' || urlPromoMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
-          scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
-          targetBeatIds: urlIds ? urlIds.split(',') : []
-        });
-        return;
+      // Si une promo est dans l'URL, on ne check pas la DB
+      return;
     }
 
-    // 2. Récupération Dynamique DB
+    // B. Récupération Dynamique depuis Neon DB
     try {
       const rawDbPromo = await getSetting<any>('promo');
+      
       let dbPromo: StorePromotion | null = rawDbPromo;
 
       if (typeof rawDbPromo === 'string') {
@@ -80,27 +65,55 @@ export const BeatStore: React.FC = () => {
       if (dbPromo && dbPromo.isActive) {
          setPromo(dbPromo);
       } else {
+         // Si la DB dit qu'il n'y a pas de promo active ou renvoie null
+         // On retire la promo (sauf si c'est la première charge et qu'on veut un fallback, 
+         // mais pour la synchro temps réel, mieux vaut respecter la DB).
          setPromo(null);
       }
     } catch (err) {
       console.error("Impossible de synchroniser la promo:", err);
     }
-  }, [searchParams]);
+  }, []);
 
+  // Initialisation et Polling
   useEffect(() => {
+    // 1. Chargement initial complet
     loadBeats();
-    checkPromo();
+    
+    // Vérification initiale de l'URL pour la promo
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    if (params.get('promo')) {
+        const urlPromoBG = params.get('bg');
+        // Support étendu pour les paramètres de pourcentage (val, value, discount, percent, pct)
+        const urlPct = params.get('pct') || params.get('percent') || params.get('discount') || params.get('val') || params.get('value'); 
+        const urlIds = params.get('ids'); 
+        
+        // CORRECTION: Utiliser directement la valeur car URLSearchParams la décode déjà.
+        // decodeURIComponent provoquait un crash avec les caractères spéciaux comme '%'
+        const rawMessage = params.get('promo')!;
 
+        setPromo({
+          isActive: true,
+          message: rawMessage,
+          discountPercentage: urlPct ? parseInt(urlPct) : 20,
+          type: (urlPromoBG === 'orange' || rawMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
+          scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
+          targetBeatIds: urlIds ? urlIds.split(',') : []
+        });
+    } else {
+        checkPromo();
+    }
+
+    // 2. Mise en place du polling (Vérifie la promo toutes les 5 secondes)
     const intervalId = setInterval(() => {
-        if (!searchParams.get('promo')) {
-            checkPromo();
-        }
+        checkPromo();
     }, 5000);
 
+    // 3. Rafraîchissement immédiat quand l'utilisateur revient sur l'onglet
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
             checkPromo();
-            loadBeats();
+            loadBeats(); // On en profite pour vérifier les nouveaux beats aussi
         }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -109,12 +122,13 @@ export const BeatStore: React.FC = () => {
         clearInterval(intervalId);
         document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [checkPromo, searchParams]);
+  }, [checkPromo]);
 
+  // Filtrage local
   useEffect(() => {
     const results = beats.filter(beat => 
       beat.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      beat.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+      beat.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredBeats(results);
   }, [searchTerm, beats]);
@@ -167,7 +181,7 @@ export const BeatStore: React.FC = () => {
 
   return (
     <div className="pb-28 relative">
-      {/* BANDEAU PROMO */}
+      {/* BANDEAU PROMO SI ACTIF */}
       {promo && promo.isActive && !selectedBeatForPurchase && (
         <div className={`mb-6 p-0.5 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.2)] animate-in slide-in-from-top-4 mx-2 mt-4 relative z-0 ${
             promo.type === 'BULK_DEAL' 
@@ -193,7 +207,7 @@ export const BeatStore: React.FC = () => {
         </div>
       )}
 
-      {/* HEADER & FILTERS */}
+      {/* HEADER & FILTERS (Masqué si modale ouverte) */}
       {!selectedBeatForPurchase && (
         <div className="sticky top-14 bg-[#0f0f0f] z-[49] py-6 -mx-4 px-6 md:mx-0 md:px-0 border-b border-[#2a2a2a] mb-12 shadow-2xl transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -236,6 +250,7 @@ export const BeatStore: React.FC = () => {
           {filteredBeats.length > 0 ? (
             filteredBeats.map((beat) => (
               <div key={beat.id} className="h-full">
+                {/* On passe la promo fetchée à la carte SEULEMENT si elle s'applique à ce beat */}
                 <BeatCard 
                     beat={beat} 
                     promo={isPromoValidForBeat(beat.id) ? promo : null} 
@@ -246,17 +261,18 @@ export const BeatStore: React.FC = () => {
           ) : (
              <div className="col-span-full py-32 text-center flex flex-col items-center justify-center opacity-40 border-2 border-dashed border-[#2a2a2a] rounded-[2rem]">
                 <Music className="w-16 h-16 mb-4 text-[#3d2b1f]" />
-                <p className="font-bold text-xl text-[#8c7a6b]">Aucun beat disponible</p>
-                <p className="text-sm italic text-[#5c4a3e] mt-2">Le catalogue est en cours de mise à jour ou vide.</p>
+                <p className="font-bold text-xl text-[#8c7a6b]">Aucun résultat trouvé</p>
+                <p className="text-sm italic text-[#5c4a3e] mt-2">Essayez un autre terme de recherche.</p>
              </div>
           )}
       </div>
 
-      {/* --- MODAL LICENCES --- */}
+      {/* --- MODAL LICENCES (Gérée au niveau du Store) --- */}
       {selectedBeatForPurchase && (
         <div className="fixed inset-0 top-[56px] z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md" onClick={closePurchaseModal} />
           <div className="relative w-full max-w-4xl bg-[#1a120b] border border-[#3d2b1f] rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
+            {/* Header */}
             <div className="p-6 border-b border-[#3d2b1f] flex justify-between items-center bg-[#120a05]">
               <div className="flex items-center gap-4">
                 <img src={selectedBeatForPurchase.coverUrl} className="w-16 h-16 rounded-xl object-cover border border-[#3d2b1f]" alt={selectedBeatForPurchase.title} />
@@ -269,8 +285,9 @@ export const BeatStore: React.FC = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
+            {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 custom-scrollbar bg-[#0f0f0f]">
-              {selectedBeatForPurchase.licenses?.map((lic) => {
+              {selectedBeatForPurchase.licenses.map((lic) => {
                 const isValid = isPromoValidForBeat(selectedBeatForPurchase.id);
                 const discountedPrice = isValid && promo 
                     ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) 
