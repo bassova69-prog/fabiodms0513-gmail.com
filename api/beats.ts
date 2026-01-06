@@ -18,68 +18,13 @@ export default async function handler(
 
   try {
     if (request.method === 'GET') {
-      const { limit } = request.query;
-      let rows;
+      const rows = await sql`SELECT * FROM beats`;
       
-      if (limit && !isNaN(Number(limit))) {
-        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
-      } else {
-        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
-      }
-      
-      // On transforme les lignes SQL en objets que le site comprend
-      const enrichedBeats = rows.map((row) => {
-        return {
-          id: row.id.toString(),
-          // On utilise les colonnes que vous avez confirmées comme remplies
-          title: row.title || "Sans titre",
-          bpm: row.bpm ? Number(row.bpm) : null,
-          coverUrl: row.cover_url || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04",
-          audioUrl: row.mp3_url || "",
-          mp3Url: row.mp3_url || "",
-          wavUrl: row.wav_url || "",
-          stemsUrl: row.stems_url || "",
-          youtubeId: row.youtube_id || "",
-          date: row.date || row.created_at || new Date().toISOString(),
-          // On prépare les licences en lisant les colonnes de prix SQL
-          licenses: [
-            {
-              id: 'mp3',
-              name: 'MP3 Lease',
-              price: Number(row.price_mp3) || 29.99,
-              fileType: 'MP3',
-              features: ['MP3 Untagged', '500,000 Streams']
-            },
-            {
-              id: 'wav',
-              name: 'WAV Lease',
-              price: Number(row.price_wav) || 49.99,
-              fileType: 'WAV',
-              features: ['WAV Untagged', 'Unlimited Streams']
-            },
-            {
-              id: 'trackout',
-              name: 'Trackout Lease',
-              price: Number(row.price_trackout) || 99.99,
-              fileType: 'TRACKOUT',
-              features: ['All Stems (WAV)', 'Unlimited Streams']
-            },
-            {
-              id: 'exclusive',
-              name: 'Exclusive Rights',
-              price: Number(row.price_exclusive) || 499.99,
-              fileType: 'EXCLUSIVE',
-              features: ['Full Ownership', 'Publishing 50/50']
-            }
-          ],
-          tags: row.tags ? (Array.isArray(row.tags) ? row.tags : (typeof row.tags === 'string' ? row.tags.replace(/^{|}$/g, '').split(',') : [])) : []
-        };
-      });
-
-      return response.status(200).json(enrichedBeats);
+      // TEST : On envoie les données brutes telles qu'elles sortent de Neon
+      return response.status(200).json(rows);
     }
 
-    // Gestion du POST (Version complète pour que l'admin fonctionne et écrive dans les colonnes SQL)
+    // Gestion du POST (Version complète avec écriture hybride SQL + JSON pour compatibilité max)
     if (request.method === 'POST') {
       const body = request.body;
       if (!body) return response.status(400).json({ error: 'Body invalide' });
@@ -97,21 +42,24 @@ export default async function handler(
       const youtubeId = beat.youtubeId || "";
       const tags = Array.isArray(beat.tags) ? beat.tags : [];
       
-      // Récupération des prix depuis l'objet ou les licences
+      // Récupération des prix
       const pMp3 = beat.price_mp3 || (beat.licenses?.find((l:any)=>l.id==='mp3')?.price) || 29.99;
       const pWav = beat.price_wav || (beat.licenses?.find((l:any)=>l.id==='wav')?.price) || 49.99;
       const pTrackout = beat.price_trackout || (beat.licenses?.find((l:any)=>l.id==='trackout')?.price) || 99.99;
       const pExclu = beat.price_exclusive || (beat.licenses?.find((l:any)=>l.id==='exclusive')?.price) || 499.99;
 
+      // Fallback JSON complet
+      const beatJson = JSON.stringify(beat);
+
       await sql`
         INSERT INTO beats (
             id, title, bpm, cover_url, mp3_url, wav_url, stems_url, youtube_id, tags,
             price_mp3, price_wav, price_trackout, price_exclusive, 
-            created_at
+            data, created_at
         ) VALUES (
             ${beat.id}, ${title}, ${bpm}, ${coverUrl}, ${mp3Url}, ${wavUrl}, ${stemsUrl}, ${youtubeId}, ${tags},
             ${pMp3}, ${pWav}, ${pTrackout}, ${pExclu},
-            NOW()
+            ${beatJson}::jsonb, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
             title = EXCLUDED.title,
@@ -125,7 +73,8 @@ export default async function handler(
             price_mp3 = EXCLUDED.price_mp3,
             price_wav = EXCLUDED.price_wav,
             price_trackout = EXCLUDED.price_trackout,
-            price_exclusive = EXCLUDED.price_exclusive;
+            price_exclusive = EXCLUDED.price_exclusive,
+            data = EXCLUDED.data;
       `;
       return response.status(200).json({ success: true, id: beat.id });
     }
