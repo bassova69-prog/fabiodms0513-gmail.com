@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FEATURED_BEATS } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2 } from 'lucide-react';
@@ -19,80 +19,106 @@ export const BeatStore: React.FC = () => {
   // État pour gérer la modale d'achat
   const [selectedBeatForPurchase, setSelectedBeatForPurchase] = useState<Beat | null>(null);
 
-  const loadData = async () => {
+  // Fonction pour charger les beats (une seule fois ou sur demande explicite)
+  const loadBeats = async () => {
     try {
-      // 1. Charger les beats
       const savedCustomBeats = await getAllBeats();
       const allBeats = [...[...savedCustomBeats].reverse(), ...FEATURED_BEATS];
       setBeats(allBeats);
-      setFilteredBeats(allBeats);
-      
-      // 2. Gestion de la promo (Priorité : URL > DB Neon > Défaut)
-      
-      // A. Vérification URL (pour test ou campagnes spécifiques)
-      const params = new URLSearchParams(window.location.hash.split('?')[1]);
-      const urlPromoMessage = params.get('promo');
-      const urlPromoBG = params.get('bg');
-      const urlPct = params.get('pct'); 
-      const urlIds = params.get('ids'); 
-
-      if (urlPromoMessage) {
-        setPromo({
-          isActive: true,
-          message: decodeURIComponent(urlPromoMessage),
-          discountPercentage: urlPct ? parseInt(urlPct) : 20,
-          type: (urlPromoBG === 'orange' || urlPromoMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
-          scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
-          targetBeatIds: urlIds ? urlIds.split(',') : []
-        });
-        return; 
-      }
-
-      // B. Récupération Dynamique depuis Neon DB (clé 'promo')
-      try {
-        const rawDbPromo = await getSetting<any>('promo');
-        console.log("Donnée reçue de la DB:", rawDbPromo);
-
-        let dbPromo: StorePromotion | null = rawDbPromo;
-
-        // Correction parsing si c'est une string (double encodage possible)
-        if (typeof rawDbPromo === 'string') {
-            try {
-                dbPromo = JSON.parse(rawDbPromo);
-            } catch (e) {
-                console.error("Erreur parsing promo JSON:", e);
-            }
-        }
-
-        if (dbPromo && dbPromo.isActive) {
-           setPromo(dbPromo);
-           return;
-        }
-      } catch (err) {
-        console.error("Impossible de récupérer la promo DB:", err);
-      }
-
-      // C. Fallback par défaut (si aucune promo active en DB)
-      setPromo({
-          isActive: true,
-          discountPercentage: 20,
-          message: "OFFRE LIMITÉE : -20% SUR TOUT LE CATALOGUE !"
+      setFilteredBeats(prev => {
+        // Garder le filtre actuel si une recherche est en cours
+        if (searchTerm) return prev; 
+        return allBeats;
       });
-
     } catch (e) {
-      console.error("Error loading data:", e);
+      console.error("Error loading beats:", e);
       setBeats(FEATURED_BEATS);
       setFilteredBeats(FEATURED_BEATS);
     }
   };
 
-  useEffect(() => {
-    loadData();
-    // On garde l'écouteur storage au cas où
-    window.addEventListener('storage', loadData);
-    return () => window.removeEventListener('storage', loadData);
+  // Fonction spécifique pour vérifier la promo (sera appelée régulièrement)
+  const checkPromo = useCallback(async () => {
+    // A. Vérification URL (Prioritaire pour test)
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const urlPromoMessage = params.get('promo');
+    
+    if (urlPromoMessage) {
+      // Si une promo est dans l'URL, on ne check pas la DB
+      return;
+    }
+
+    // B. Récupération Dynamique depuis Neon DB
+    try {
+      const rawDbPromo = await getSetting<any>('promo');
+      
+      let dbPromo: StorePromotion | null = rawDbPromo;
+
+      if (typeof rawDbPromo === 'string') {
+          try {
+              dbPromo = JSON.parse(rawDbPromo);
+          } catch (e) {
+              console.error("Erreur parsing promo JSON:", e);
+          }
+      }
+
+      if (dbPromo && dbPromo.isActive) {
+         setPromo(dbPromo);
+      } else {
+         // Si la DB dit qu'il n'y a pas de promo active ou renvoie null
+         // On retire la promo (sauf si c'est la première charge et qu'on veut un fallback, 
+         // mais pour la synchro temps réel, mieux vaut respecter la DB).
+         setPromo(null);
+      }
+    } catch (err) {
+      console.error("Impossible de synchroniser la promo:", err);
+    }
   }, []);
 
+  // Initialisation et Polling
+  useEffect(() => {
+    // 1. Chargement initial complet
+    loadBeats();
+    
+    // Vérification initiale de l'URL pour la promo
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    if (params.get('promo')) {
+        const urlPromoBG = params.get('bg');
+        const urlPct = params.get('pct'); 
+        const urlIds = params.get('ids'); 
+        setPromo({
+          isActive: true,
+          message: decodeURIComponent(params.get('promo')!),
+          discountPercentage: urlPct ? parseInt(urlPct) : 20,
+          type: (urlPromoBG === 'orange' || params.get('promo')!.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
+          scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
+          targetBeatIds: urlIds ? urlIds.split(',') : []
+        });
+    } else {
+        checkPromo();
+    }
+
+    // 2. Mise en place du polling (Vérifie la promo toutes les 5 secondes)
+    const intervalId = setInterval(() => {
+        checkPromo();
+    }, 5000);
+
+    // 3. Rafraîchissement immédiat quand l'utilisateur revient sur l'onglet
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+            checkPromo();
+            loadBeats(); // On en profite pour vérifier les nouveaux beats aussi
+        }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+        clearInterval(intervalId);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [checkPromo]);
+
+  // Filtrage local
   useEffect(() => {
     const results = beats.filter(beat => 
       beat.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,7 +135,6 @@ export const BeatStore: React.FC = () => {
     setSelectedBeatForPurchase(null);
   };
 
-  // Helper pour vérifier si la promo s'applique à un beat donné
   const isPromoValidForBeat = (beatId: string) => {
     if (!promo || !promo.isActive) return false;
     if (promo.scope === 'GLOBAL') return true;
@@ -122,7 +147,6 @@ export const BeatStore: React.FC = () => {
     
     let finalPrice = license.price;
 
-    // Calcul dynamique de la réduction
     if (promo && promo.isActive) {
       const isGlobal = promo.scope === 'GLOBAL';
       const isTargeted = promo.scope === 'SPECIFIC' && (promo.targetBeatIds?.includes(beat.id) ?? false);

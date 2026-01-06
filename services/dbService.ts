@@ -6,7 +6,8 @@ export const initDB = async (): Promise<void> => Promise.resolve();
 // --- GENERIC HELPERS ---
 async function fetchItems<T>(endpoint: string): Promise<T[]> {
   try {
-    const res = await fetch(`/api/${endpoint}`);
+    // AJOUT: t=${Date.now()} pour éviter le cache Vercel
+    const res = await fetch(`/api/${endpoint}?t=${Date.now()}`);
     if (!res.ok) {
       console.warn(`[DB] Fetch failed for ${endpoint}: ${res.status} ${res.statusText}`);
       return [];
