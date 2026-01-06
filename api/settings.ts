@@ -1,25 +1,28 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+
+const DB_URL = "postgresql://neondb_owner:npg_j8usSmDb5FpZ@ep-sparkling-hall-a4ygj36w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
+  const sql = neon(DB_URL);
+  
   // Empêcher le cache Vercel et Navigateur pour avoir les données en temps réel
   response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   response.setHeader('Pragma', 'no-cache');
   response.setHeader('Expires', '0');
 
   try {
-    // Table clé-valeur simple pour les configurations
     await sql`CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value JSONB,
-      updated_at TIMESTAMP DEFAULT NOW()
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`;
 
     if (request.method === 'GET') {
       const { key } = request.query;
       if (key) {
-        const { rows } = await sql`SELECT value FROM settings WHERE key = ${key as string}`;
+        const rows = await sql`SELECT value FROM settings WHERE key = ${key as string}`;
         return response.status(200).json(rows.length > 0 ? rows[0].value : null);
       }
       return response.status(400).json({ error: 'Key required' });
@@ -37,7 +40,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     return response.status(405).json({ error: 'Method Not Allowed' });
-  } catch (error) {
-    return response.status(500).json({ error: String(error) });
+  } catch (error: any) {
+    return response.status(500).json({ error: error.message });
   }
 }

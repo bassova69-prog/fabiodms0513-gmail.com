@@ -1,17 +1,21 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+
+const DB_URL = "postgresql://neondb_owner:npg_j8usSmDb5FpZ@ep-sparkling-hall-a4ygj36w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
+  const sql = neon(DB_URL);
+
   try {
     await sql`CREATE TABLE IF NOT EXISTS events (
       id TEXT PRIMARY KEY,
       data JSONB,
-      created_at TIMESTAMP DEFAULT NOW()
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`;
 
     if (request.method === 'GET') {
-      const { rows } = await sql`SELECT data FROM events ORDER BY created_at ASC;`;
+      const rows = await sql`SELECT data FROM events ORDER BY created_at ASC;`;
       return response.status(200).json(rows.map(r => r.data));
     }
 
@@ -31,7 +35,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     return response.status(405).json({ error: 'Method Not Allowed' });
-  } catch (error) {
-    return response.status(500).json({ error: String(error) });
+  } catch (error: any) {
+    return response.status(500).json({ error: error.message });
   }
 }
