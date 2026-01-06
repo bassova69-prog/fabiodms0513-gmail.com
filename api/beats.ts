@@ -11,7 +11,7 @@ export default async function handler(
   const sql = neon(DB_URL);
 
   try {
-    // Création table si inexistante
+    // Création table si inexistante (fallback)
     await sql`CREATE TABLE IF NOT EXISTS beats (
       id TEXT PRIMARY KEY,
       data JSONB
@@ -24,16 +24,18 @@ export default async function handler(
       let beats;
       if (limitVal && !isNaN(Number(limitVal))) {
         const limitNum = Number(limitVal);
-        beats = await sql`SELECT id, data FROM beats LIMIT ${limitNum}`;
+        // UTILISATION DE SELECT * POUR RÉCUPÉRER TOUTES LES COLONNES CRÉÉES
+        beats = await sql`SELECT * FROM beats LIMIT ${limitNum}`;
       } else {
-        beats = await sql`SELECT id, data FROM beats`;
+        beats = await sql`SELECT * FROM beats`;
       }
       
       const enrichedBeats = beats.map((row) => {
         try {
+            // 1. Base : données JSONB
             let beatData = row.data || {};
 
-            // 1. Déballage : Si les données sont imbriquées dans "data" ou "beat"
+            // Déballage si nécessaire
             if (beatData.data) {
                 beatData = { ...beatData, ...beatData.data };
                 delete beatData.data;
@@ -43,45 +45,88 @@ export default async function handler(
                 delete beatData.beat;
             }
             
-            // 2. Garantie de l'ID : On utilise la clé primaire si l'ID manque dans le JSON
-            if (!beatData.id && row.id) {
-                beatData.id = row.id;
+            // 2. Initialisation de l'objet Beat
+            const beat: any = {
+                id: row.id,
+                ...beatData
+            };
+
+            // 3. FUSION : Les colonnes explicites de la DB sont prioritaires
+            if (row.title) beat.title = row.title;
+            if (row.bpm) beat.bpm = Number(row.bpm);
+            if (row.tags && Array.isArray(row.tags)) beat.tags = row.tags;
+            if (row.cover_url) beat.coverUrl = row.cover_url;
+            if (row.audio_url) beat.audioUrl = row.audio_url;
+            if (row.mp3_url) beat.mp3Url = row.mp3_url;
+            if (row.wav_url) beat.wavUrl = row.wav_url;
+            if (row.stems_url) beat.stemsUrl = row.stems_url;
+            if (row.youtube_id) beat.youtubeId = row.youtube_id;
+            if (row.date) beat.date = row.date;
+
+            // 4. Construction des Licences à partir des colonnes de prix (si présentes)
+            let licenses = Array.isArray(beat.licenses) ? beat.licenses : [];
+
+            const addOrUpdateLicense = (type: string, price: any, name: string, features: string[]) => {
+                if (price === null || price === undefined) return;
+                const priceNum = Number(price);
+                const existingIndex = licenses.findIndex((l: any) => l.fileType === type);
+                
+                if (existingIndex >= 0) {
+                    licenses[existingIndex].price = priceNum;
+                } else {
+                    licenses.push({
+                        id: type.toLowerCase(),
+                        name,
+                        price: priceNum,
+                        fileType: type,
+                        features,
+                        streamsLimit: type === 'EXCLUSIVE' || type === 'TRACKOUT' || type === 'WAV' ? 'Unlimited' : 500000
+                    });
+                }
+            };
+
+            // Mappage des colonnes de prix vers les objets License
+            if (row.price_mp3) addOrUpdateLicense('MP3', row.price_mp3, 'MP3 Lease', ['MP3 Untagged', '500,000 Streams']);
+            if (row.price_wav) addOrUpdateLicense('WAV', row.price_wav, 'WAV Lease', ['WAV Untagged', 'Unlimited Streams']);
+            if (row.price_trackout) addOrUpdateLicense('TRACKOUT', row.price_trackout, 'Trackout Lease', ['All Stems (WAV)', 'Unlimited Streams']);
+            if (row.price_exclusive) addOrUpdateLicense('EXCLUSIVE', row.price_exclusive, 'Exclusive Rights', ['Full Ownership', 'Publishing 50/50']);
+
+            beat.licenses = licenses;
+
+            // 5. Valeurs par défaut pour affichage
+            if (!beat.title) beat.title = "Beat sans titre";
+            if (!beat.coverUrl) beat.coverUrl = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80";
+            if (!beat.tags) beat.tags = [];
+
+            // Fallback licences si vide
+            if (beat.licenses.length === 0) {
+                 beat.licenses = [
+                    { id: 'mp3', name: 'MP3 Lease', price: 29.99, fileType: 'MP3', features: ['MP3 Untagged', '500,000 Streams'], streamsLimit: 500000 },
+                    { id: 'wav', name: 'WAV Lease', price: 49.99, fileType: 'WAV', features: ['WAV Untagged', 'Unlimited Streams'], streamsLimit: 'Unlimited' }
+                 ];
             }
 
-            // 3. Valeurs par défaut pour affichage coûte que coûte
-            if (!beatData.title) {
-                beatData.title = "Beat sans titre"; 
-            }
-            if (!beatData.coverUrl) {
-                beatData.coverUrl = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80";
-            }
-            if (!beatData.licenses) {
-                beatData.licenses = [];
-            }
-
-            // 4. Gestion Date
-            if (!beatData.date) {
-                // Tentative d'extraction du timestamp depuis l'ID (ex: beat-170...)
-                if (beatData.id && typeof beatData.id === 'string' && beatData.id.startsWith('beat-')) {
-                    const parts = beatData.id.split('-');
+            // 6. Gestion Date ISO
+            if (!beat.date) {
+                if (beat.id && typeof beat.id === 'string' && beat.id.startsWith('beat-')) {
+                    const parts = beat.id.split('-');
                     if (parts.length > 1) {
                         const timestamp = parseInt(parts[1], 10);
                         if (!isNaN(timestamp) && timestamp > 1600000000000) {
-                            beatData.date = new Date(timestamp).toISOString();
+                            beat.date = new Date(timestamp).toISOString();
                         } else {
-                            beatData.date = new Date().toISOString();
+                            beat.date = new Date().toISOString();
                         }
                     } else {
-                        beatData.date = new Date().toISOString();
+                        beat.date = new Date().toISOString();
                     }
                 } else {
-                    beatData.date = new Date().toISOString();
+                    beat.date = new Date().toISOString();
                 }
             }
-            return beatData;
+            return beat;
         } catch (e) {
             console.error("Erreur parsing row:", e);
-            // En cas d'erreur de parsing grave, on renvoie au moins l'ID pour debug
             return { id: row.id, title: "Données corrompues", date: new Date().toISOString() };
         }
       }).filter(Boolean);
@@ -103,23 +148,22 @@ export default async function handler(
         return response.status(400).json({ error: 'Body invalide ou vide' });
       }
 
-      // Nettoyage structure à la source pour les futurs ajouts
       let beat = body.beat || body.data || body;
 
       if (!beat.id) {
         beat.id = `beat-${Date.now()}`;
       }
 
-      if (!beat.date) {
-         // Si date non fournie lors de la création/update
-      } else {
+      if (beat.date) {
          try { beat.date = new Date(beat.date).toISOString(); } catch(e) {}
       }
 
       const beatId = beat.id;
       const beatJson = JSON.stringify(beat);
 
-      // Utilisation du merge JSONB (||) pour ne pas écraser les champs existants lors d'un update partiel
+      // Pour l'insertion, on continue de mettre à jour le JSONB 'data'
+      // Si vous souhaitez synchroniser les colonnes lors de l'ajout, il faudrait modifier cette requête,
+      // mais pour l'instant on garde la logique "Update JSONB" pour ne pas casser l'existant.
       await sql`
         INSERT INTO beats (id, data)
         VALUES (${beatId}, ${beatJson}::jsonb)
