@@ -1,7 +1,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
-import { randomUUID } from 'crypto';
+
+// Note: On retire l'import de crypto qui peut faire planter certaines runtimes serverless si inutilisé.
 
 const DB_URL = "postgresql://neondb_owner:npg_j8usSmDb5FpZ@ep-sparkling-hall-a4ygj36w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
@@ -12,39 +13,66 @@ export default async function handler(
   const sql = neon(DB_URL);
 
   try {
-    // On revient au schéma simple et stable
     await sql`CREATE TABLE IF NOT EXISTS beats (
       id TEXT PRIMARY KEY,
       data JSONB
     );`;
 
     if (request.method === 'GET') {
-      // On ne sélectionne QUE les données JSON pour éviter toute erreur de colonne
-      const beats = await sql`SELECT data FROM beats`;
+      const { limit } = request.query;
+      const limitVal = Array.isArray(limit) ? limit[0] : limit;
+
+      let beats;
+      if (limitVal && !isNaN(Number(limitVal))) {
+        // Optimisation pour le checkConnection
+        const limitNum = Number(limitVal);
+        beats = await sql`SELECT data FROM beats LIMIT ${limitNum}`;
+      } else {
+        beats = await sql`SELECT data FROM beats`;
+      }
       
       const enrichedBeats = beats.map((row) => {
-        const beatData = row.data;
-        
-        // LOGIQUE DE RÉPARATION DE LA DATE (Côté Serveur)
-        // Si pas de date, on essaie de l'extraire de l'ID (ex: beat-1767715149742)
-        if (!beatData.date) {
-            if (beatData.id && beatData.id.startsWith('beat-')) {
-                const timestamp = parseInt(beatData.id.split('-')[1]);
-                // Si le timestamp semble valide (supérieur à 2020)
-                if (!isNaN(timestamp) && timestamp > 1600000000000) {
-                    beatData.date = new Date(timestamp).toISOString();
+        try {
+            const beatData = row.data || {};
+            
+            // Correction ID si manquant dans le JSON mais présent en clé primaire
+            if (!beatData.id && row.id) {
+                beatData.id = row.id;
+            }
+
+            // Réparation de la date via l'ID (timestamp)
+            if (!beatData.date) {
+                if (beatData.id && typeof beatData.id === 'string' && beatData.id.startsWith('beat-')) {
+                    const parts = beatData.id.split('-');
+                    if (parts.length > 1) {
+                        const timestamp = parseInt(parts[1], 10);
+                        // Si le timestamp est valide (> année 2020)
+                        if (!isNaN(timestamp) && timestamp > 1600000000000) {
+                            beatData.date = new Date(timestamp).toISOString();
+                        } else {
+                            beatData.date = new Date().toISOString();
+                        }
+                    } else {
+                        beatData.date = new Date().toISOString();
+                    }
                 } else {
                     beatData.date = new Date().toISOString();
                 }
-            } else {
-                beatData.date = new Date().toISOString();
             }
+            return beatData;
+        } catch (e) {
+            console.warn("Row corrupt:", row);
+            return null;
         }
-        return beatData;
-      });
+      }).filter(Boolean);
 
-      // Tri par date (du plus récent au plus ancien)
-      enrichedBeats.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      // Tri par date décroissante (plus récent en premier)
+      // Utilisation sécurisée de getTime() pour éviter les crashs sur date invalide
+      enrichedBeats.sort((a, b) => {
+          const dateA = a.date ? new Date(a.date).getTime() : 0;
+          const dateB = b.date ? new Date(b.date).getTime() : 0;
+          return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
+      });
 
       return response.status(200).json(enrichedBeats);
     }
@@ -53,24 +81,24 @@ export default async function handler(
       const beat = request.body;
       
       if (!beat) {
-        return response.status(400).json({ error: 'Données invalides' });
+        return response.status(400).json({ error: 'Body invalide ou vide' });
       }
 
-      // Si l'ID est fourni sans prefixe ou manquant
       if (!beat.id) {
         beat.id = `beat-${Date.now()}`;
       }
 
-      // On assure une date dans le JSON sauvegardé
       if (!beat.date) {
         beat.date = new Date().toISOString();
       }
 
+      const beatJson = JSON.stringify(beat);
+
       await sql`
         INSERT INTO beats (id, data)
-        VALUES (${beat.id}, ${JSON.stringify(beat)})
+        VALUES (${beat.id}, ${beatJson}::jsonb)
         ON CONFLICT (id) DO UPDATE
-        SET data = ${JSON.stringify(beat)};
+        SET data = ${beatJson}::jsonb;
       `;
       
       return response.status(200).json({ success: true, id: beat.id });
@@ -78,9 +106,13 @@ export default async function handler(
 
     if (request.method === 'DELETE') {
       const { id } = request.query;
-      if (!id) return response.status(400).json({ error: 'ID manquant' });
+      const idVal = Array.isArray(id) ? id[0] : id;
       
-      await sql`DELETE FROM beats WHERE id = ${id.toString()}`;
+      if (!idVal) {
+        return response.status(400).json({ error: 'ID manquant' });
+      }
+      
+      await sql`DELETE FROM beats WHERE id = ${idVal}`;
       return response.status(200).json({ success: true });
     }
 
@@ -88,6 +120,10 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('Database Error:', error);
-    return response.status(500).json({ error: 'Erreur serveur base de données', details: error.message });
+    // On renvoie un JSON valide même en cas d'erreur 500 pour que le front puisse l'afficher
+    return response.status(500).json({ 
+        error: 'Erreur serveur base de données', 
+        details: error.message 
+    });
   }
 }

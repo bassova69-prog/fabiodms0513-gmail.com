@@ -28,7 +28,8 @@ export const Success: React.FC = () => {
         // Création des transactions pour chaque beat acheté
         const newTransactions: Transaction[] = purchasedItems.map((item: any) => ({
           id: `sale-${item.id}`, // Utilise l'ID unique de l'item du panier
-          date: new Date().toLocaleDateString('fr-FR'),
+          // IMPORTANT: Utilisation du format ISO pour compatibilité backend parfaite
+          date: new Date().toISOString(), 
           label: `Vente: ${item.beat.title} (${item.license.name})`,
           customer: "Client Boutique Web",
           category: 'VENTE',
