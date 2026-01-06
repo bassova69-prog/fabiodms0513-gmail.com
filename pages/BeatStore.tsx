@@ -84,13 +84,19 @@ export const BeatStore: React.FC = () => {
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
     if (params.get('promo')) {
         const urlPromoBG = params.get('bg');
-        const urlPct = params.get('pct'); 
+        // Support étendu pour les paramètres de pourcentage (val, value, discount, percent, pct)
+        const urlPct = params.get('pct') || params.get('percent') || params.get('discount') || params.get('val') || params.get('value'); 
         const urlIds = params.get('ids'); 
+        
+        // CORRECTION: Utiliser directement la valeur car URLSearchParams la décode déjà.
+        // decodeURIComponent provoquait un crash avec les caractères spéciaux comme '%'
+        const rawMessage = params.get('promo')!;
+
         setPromo({
           isActive: true,
-          message: decodeURIComponent(params.get('promo')!),
+          message: rawMessage,
           discountPercentage: urlPct ? parseInt(urlPct) : 20,
-          type: (urlPromoBG === 'orange' || params.get('promo')!.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
+          type: (urlPromoBG === 'orange' || rawMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
           scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
           targetBeatIds: urlIds ? urlIds.split(',') : []
         });
