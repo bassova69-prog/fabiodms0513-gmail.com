@@ -95,10 +95,11 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
               <h3 className={`font-black text-sm line-clamp-1 leading-tight mb-0.5 ${isCurrent ? 'text-amber-500' : 'text-white group-hover:text-amber-100'}`}>
               {beat.title || 'Untitled Beat'}
               </h3>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between min-h-[16px]">
                   <span className="text-[#8c7a6b] text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
                       Fabio DMS {beat.key && <span className="text-[#5c4a3e]">• {beat.key}</span>}
                   </span>
+                  {/* Affichage conditionnel de l'icône Youtube, ne bloque pas le rendu si absent */}
                   {beat.youtubeId && <Youtube className="w-3 h-3 text-red-600 opacity-80" />}
               </div>
           </div>

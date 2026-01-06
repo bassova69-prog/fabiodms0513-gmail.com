@@ -19,7 +19,8 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vercel/node": "^5.5.16",
     "@vercel/postgres": "^0.10.0",
-    "@neondatabase/serverless": "^1.0.2"
+    "@neondatabase/serverless": "^1.0.2",
+    "crypto": "^1.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -1,6 +1,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
+import { randomUUID } from 'crypto';
 
 const DB_URL = "postgresql://neondb_owner:npg_j8usSmDb5FpZ@ep-sparkling-hall-a4ygj36w-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
@@ -26,8 +27,14 @@ export default async function handler(
     if (request.method === 'POST') {
       const beat = request.body;
       
-      if (!beat || !beat.id) {
-        return response.status(400).json({ error: 'Données invalides : ID manquant' });
+      // Validation minimale : on a besoin au moins de l'objet beat
+      if (!beat) {
+        return response.status(400).json({ error: 'Données invalides' });
+      }
+
+      // GÉNÉRATION ID AUTOMATIQUE si manquant (Support du "id non obligatoire")
+      if (!beat.id) {
+        beat.id = randomUUID();
       }
 
       await sql`
@@ -37,7 +44,7 @@ export default async function handler(
         SET data = ${JSON.stringify(beat)};
       `;
       
-      return response.status(200).json({ success: true });
+      return response.status(200).json({ success: true, id: beat.id });
     }
 
     if (request.method === 'DELETE') {
