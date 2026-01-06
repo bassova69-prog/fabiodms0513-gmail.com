@@ -13,11 +13,15 @@ interface BeatCardProps {
 export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
 
+  // Protection anti-crash si l'objet beat est null ou undefined
+  if (!beat) return null;
+
   const isCurrent = currentBeat?.id === beat.id;
   const isCurrentAndPlaying = isCurrent && isPlaying;
   
-  const originalLowestPrice = beat.licenses[0]?.price || 0;
-  // Calcul du prix remisé basé sur la prop 'promo' passée par le parent (Store ou Home)
+  // Protection pour les licences : si vide ou undefined, on fallback sur 0
+  const originalLowestPrice = beat.licenses?.[0]?.price || 0;
+  
   const lowestPrice = promo && promo.isActive
     ? Number((originalLowestPrice * (1 - promo.discountPercentage / 100)).toFixed(2))
     : originalLowestPrice;
@@ -31,6 +35,9 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
     onPurchase(beat);
   };
 
+  // Protection pour les tags : on s'assure que c'est un tableau
+  const displayTags = Array.isArray(beat.tags) ? beat.tags.slice(0, 3) : [];
+
   return (
     <div 
       onClick={handleCardClick}
@@ -39,8 +46,8 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
       {/* --- IMAGE AREA (Compact) --- */}
       <div className="relative aspect-video w-full overflow-hidden bg-[#2a1e16]">
         <img 
-          src={beat.coverUrl} 
-          alt={beat.title} 
+          src={beat.coverUrl || 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80'} 
+          alt={beat.title || 'Beat'} 
           className={`w-full h-full object-cover transition-transform duration-700 ${isCurrentAndPlaying ? 'scale-110 saturate-150' : 'group-hover:scale-105'}`}
         />
         
@@ -86,7 +93,7 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
 
           <div>
               <h3 className={`font-black text-sm line-clamp-1 leading-tight mb-0.5 ${isCurrent ? 'text-amber-500' : 'text-white group-hover:text-amber-100'}`}>
-              {beat.title}
+              {beat.title || 'Untitled Beat'}
               </h3>
               <div className="flex items-center justify-between">
                   <span className="text-[#8c7a6b] text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
@@ -97,7 +104,7 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
           </div>
 
           <div className="flex flex-wrap gap-1 mt-0.5">
-              {beat.tags.slice(0, 3).map((tag, i) => (
+              {displayTags.map((tag, i) => (
                   <span key={i} className="text-[8px] px-1.5 py-px bg-[#2a1e16] border border-[#3d2b1f] rounded text-[#a89080] whitespace-nowrap">
                       #{tag}
                   </span>

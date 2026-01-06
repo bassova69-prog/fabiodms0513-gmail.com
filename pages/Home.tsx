@@ -18,10 +18,12 @@ export const Home: React.FC = () => {
     const fetchHomeBeats = async () => {
       try {
         const dbBeats = await getAllBeats();
-        if (dbBeats && dbBeats.length > 0) {
+        if (Array.isArray(dbBeats) && dbBeats.length > 0) {
+          // Filtrage pour ne garder que les beats valides (avec un titre et un ID)
+          const validDbBeats = dbBeats.filter(b => b && b.id && b.title);
+          
           // On combine les beats DB (prioritaires, inversés pour avoir les plus récents) et les beats par défaut
-          // On prend les 4 premiers pour l'affichage
-          const combined = [...[...dbBeats].reverse(), ...FEATURED_BEATS];
+          const combined = [...[...validDbBeats].reverse(), ...FEATURED_BEATS];
           setDisplayBeats(combined.slice(0, 4));
         }
       } catch (error) {
@@ -143,7 +145,7 @@ export const Home: React.FC = () => {
           </h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayBeats.map(beat => (
+          {displayBeats.map((beat) => (
             <BeatCard 
               key={beat.id} 
               beat={beat} 
