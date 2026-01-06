@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Download, CheckCircle2, Music, ShoppingBag, ArrowRight, Loader2, Info, FileAudio, Landmark, FolderArchive } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Transaction } from '../types';
+import { saveTransaction } from '../services/dbService';
 
 export const Success: React.FC = () => {
   const navigate = useNavigate();
@@ -43,6 +44,11 @@ export const Success: React.FC = () => {
         if (filteredNew.length > 0) {
           const updatedTransactions = [...filteredNew, ...savedTransactions];
           localStorage.setItem(ACCOUNTING_STORAGE_KEY, JSON.stringify(updatedTransactions));
+
+          // Sauvegarde dans Neon DB
+          filteredNew.forEach(t => {
+            saveTransaction(t).catch(err => console.warn("DB Save failed for transaction", t.id, err));
+          });
         }
         
         processedRef.current = true;

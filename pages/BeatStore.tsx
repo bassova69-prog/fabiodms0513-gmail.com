@@ -5,7 +5,7 @@ import { BeatCard } from '../components/BeatCard';
 import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Beat, StorePromotion, License } from '../types';
-import { getAllBeats } from '../services/dbService';
+import { getAllBeats, getSetting } from '../services/dbService';
 import { usePlayer } from '../contexts/PlayerContext';
 
 export const BeatStore: React.FC = () => {
@@ -21,59 +21,51 @@ export const BeatStore: React.FC = () => {
 
   const loadData = async () => {
     try {
+      // 1. Charger les beats
       const savedCustomBeats = await getAllBeats();
       const allBeats = [...[...savedCustomBeats].reverse(), ...FEATURED_BEATS];
       setBeats(allBeats);
       setFilteredBeats(allBeats);
       
-      // --- NOUVEAU : INTERCEPTION DE LA PROMO VIA L'URL ---
+      // 2. Gestion de la promo (Priorité : URL > DB Neon > Défaut)
+      
+      // A. Vérification URL (pour test ou campagnes spécifiques)
       const params = new URLSearchParams(window.location.hash.split('?')[1]);
       const urlPromoMessage = params.get('promo');
       const urlPromoBG = params.get('bg');
-      const urlPct = params.get('pct'); // Nouveau : le % choisi
-      const urlIds = params.get('ids'); // Nouveau : les IDs des beats sélectionnés
+      const urlPct = params.get('pct'); 
+      const urlIds = params.get('ids'); 
 
       if (urlPromoMessage) {
         setPromo({
           isActive: true,
           message: decodeURIComponent(urlPromoMessage),
           discountPercentage: urlPct ? parseInt(urlPct) : 20,
-          // On détermine le type selon le message ou le paramètre bg
           type: (urlPromoBG === 'orange' || urlPromoMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
-          // Si urlIds existe, la promo est ciblée (SPECIFIC), sinon elle est globale
           scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
           targetBeatIds: urlIds ? urlIds.split(',') : []
         });
-        return; // On arrête ici, l'URL est prioritaire sur tout le reste
+        return; 
       }
 
-      // --- LOGIQUE EXISTANTE (RESTE INCHANGÉE) ---
+      // B. Récupération Dynamique depuis Neon DB (clé 'promo')
       try {
-        const response = await fetch('https://gestion-fabio.vercel.app/promo.json');
-        if (response.ok) {
-           const remotePromo = await response.json();
-           if (remotePromo && typeof remotePromo.isActive === 'boolean') {
-             setPromo(remotePromo);
-             return; // Si succès, on arrête là
-           }
+        const dbPromo = await getSetting<StorePromotion>('promo');
+        if (dbPromo && dbPromo.isActive) {
+           setPromo(dbPromo);
+           return;
         }
       } catch (err) {
-        console.log("Impossible de récupérer la promo distante, fallback local.");
+        console.error("Impossible de récupérer la promo DB:", err);
       }
 
-      // 2. Fallback Local Storage (si dev local)
-      const savedPromo = localStorage.getItem('fabio_store_promo');
-      if (savedPromo) {
-        const p = JSON.parse(savedPromo);
-        if (p.isActive) setPromo(p);
-      } else {
-        // 3. Fallback par défaut (Si aucune connexion)
-        setPromo({
+      // C. Fallback par défaut (si aucune promo active en DB)
+      setPromo({
           isActive: true,
           discountPercentage: 20,
           message: "OFFRE LIMITÉE : -20% SUR TOUT LE CATALOGUE !"
-        });
-      }
+      });
+
     } catch (e) {
       console.error("Error loading data:", e);
       setBeats(FEATURED_BEATS);
@@ -83,6 +75,7 @@ export const BeatStore: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    // On garde l'écouteur storage au cas où
     window.addEventListener('storage', loadData);
     return () => window.removeEventListener('storage', loadData);
   }, []);
@@ -122,9 +115,6 @@ export const BeatStore: React.FC = () => {
       const isTargeted = promo.scope === 'SPECIFIC' && (promo.targetBeatIds?.includes(beat.id) ?? false);
 
       if (isGlobal || isTargeted) {
-        // Si c'est "2 achetés 1 offert", on ne change pas le prix unitaire ici 
-        // (ça se gère souvent au total du panier), 
-        // mais s'il s'agit d'un pourcentage :
         if (promo.type === 'PERCENTAGE' || isTargeted) {
           finalPrice = Number((license.price * (1 - promo.discountPercentage / 100)).toFixed(2));
         }

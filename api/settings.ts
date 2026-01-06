@@ -3,6 +3,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from '@vercel/postgres';
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
+  // Empêcher le cache Vercel et Navigateur pour avoir les données en temps réel
+  response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.setHeader('Pragma', 'no-cache');
+  response.setHeader('Expires', '0');
+
   try {
     // Table clé-valeur simple pour les configurations
     await sql`CREATE TABLE IF NOT EXISTS settings (

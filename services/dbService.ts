@@ -7,12 +7,15 @@ export const initDB = async (): Promise<void> => Promise.resolve();
 async function fetchItems<T>(endpoint: string): Promise<T[]> {
   try {
     const res = await fetch(`/api/${endpoint}`);
-    if (!res.ok) throw new Error(`Error fetching ${endpoint}`);
+    if (!res.ok) {
+      console.warn(`[DB] Fetch failed for ${endpoint}: ${res.status} ${res.statusText}`);
+      return [];
+    }
     const contentType = res.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) return [];
     return await res.json();
   } catch (e) {
-    console.error(e);
+    console.warn(`[DB] Network error for ${endpoint}:`, e);
     return [];
   }
 }
@@ -54,7 +57,8 @@ export const deleteEvent = (id: string) => deleteItem('events', id);
 // --- SETTINGS (Promo, PIN) ---
 export const getSetting = async <T>(key: string): Promise<T | null> => {
   try {
-    const res = await fetch(`/api/settings?key=${key}`);
+    // Ajout d'un timestamp pour éviter le cache navigateur local
+    const res = await fetch(`/api/settings?key=${key}&t=${Date.now()}`);
     if (!res.ok) return null;
     return await res.json();
   } catch (e) {
