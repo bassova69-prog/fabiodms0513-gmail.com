@@ -1,16 +1,38 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FEATURED_BEATS, MASTERCLASSES, PROFILE_IMAGE_URL, ARTIST_NAME } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Link, useNavigate } from 'react-router-dom';
 import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
+import { getAllBeats } from '../services/dbService';
+import { Beat } from '../types';
 
 export const Home: React.FC = () => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
   const navigate = useNavigate();
+  const [displayBeats, setDisplayBeats] = useState<Beat[]>(FEATURED_BEATS);
 
-  const featuredBeat = FEATURED_BEATS[0];
+  // Chargement des beats depuis la DB pour afficher les nouveautés réelles
+  useEffect(() => {
+    const fetchHomeBeats = async () => {
+      try {
+        const dbBeats = await getAllBeats();
+        if (dbBeats && dbBeats.length > 0) {
+          // On combine les beats DB (prioritaires, inversés pour avoir les plus récents) et les beats par défaut
+          // On prend les 4 premiers pour l'affichage
+          const combined = [...[...dbBeats].reverse(), ...FEATURED_BEATS];
+          setDisplayBeats(combined.slice(0, 4));
+        }
+      } catch (error) {
+        console.error("Erreur chargement beats home:", error);
+      }
+    };
+    fetchHomeBeats();
+  }, []);
+
+  // Le beat mis en avant est le tout premier de la liste (le plus récent)
+  const featuredBeat = displayBeats[0];
 
   const handlePlayFeatured = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -121,7 +143,7 @@ export const Home: React.FC = () => {
           </h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {FEATURED_BEATS.slice(0, 4).map(beat => (
+          {displayBeats.map(beat => (
             <BeatCard 
               key={beat.id} 
               beat={beat} 
