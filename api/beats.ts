@@ -28,26 +28,30 @@ export default async function handler(
       
       const enrichedBeats = rows.map((row) => {
         try {
-            // Récupération des données JSON (fallback si colonnes vides)
-            const d = row.data || {};
-            
-            // On crée l'objet beat en utilisant colonnes SQL OU données JSON
+            // DÉTECTION DU TITRE (Uniquement via colonnes SQL)
+            const detectedTitle = row.title || row.name || row.nom || row.titre || "Sans titre";
+
+            // DÉTECTION DE LA COVER (Uniquement via colonnes SQL)
+            const detectedCover = row.cover_url || row.cover || row.image || row.image_url || 
+                                  "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80";
+
+            // On crée l'objet beat
             const beat: any = {
                 id: row.id,
-                title: row.title || d.title || "Sans titre",
-                bpm: row.bpm ? Number(row.bpm) : (d.bpm ? Number(d.bpm) : null),
-                coverUrl: row.cover_url || d.coverUrl || d.cover_url || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80",
-                date: row.date || d.date || (row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString()),
+                title: detectedTitle,
+                bpm: row.bpm ? Number(row.bpm) : null,
+                coverUrl: detectedCover,
+                date: row.date || (row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString()),
                 
-                // URLs Audio
-                mp3Url: row.mp3_url || d.mp3Url || d.mp3_url || null,
-                wavUrl: row.wav_url || d.wavUrl || d.wav_url || null,
-                stemsUrl: row.stems_url || d.stemsUrl || d.stems_url || null,
-                youtubeId: row.youtube_id || d.youtubeId || d.youtube_id || null
+                // URLs Audio (Uniquement via colonnes SQL)
+                mp3Url: row.mp3_url || null,
+                wavUrl: row.wav_url || null,
+                stemsUrl: row.stems_url || null,
+                youtubeId: row.youtube_id || null
             };
 
             // Gestion des tags
-            let rawTags = row.tags || d.tags;
+            let rawTags = row.tags;
             if (rawTags) {
                 if (Array.isArray(rawTags)) {
                     beat.tags = rawTags;
@@ -60,11 +64,11 @@ export default async function handler(
                 beat.tags = [];
             }
 
-            // Reconstruction des licences (Colonne SQL > JSON > Fallback)
+            // Reconstruction des licences (Colonnes SQL uniquement)
             const licenses = [];
             
             // MP3
-            const pMp3 = row.price_mp3 || row.price_lease || d.price_mp3 || d.price_lease;
+            const pMp3 = row.price_mp3 || row.price_lease || row.mp3_price;
             if (pMp3) {
                 licenses.push({
                     id: 'mp3',
@@ -74,13 +78,10 @@ export default async function handler(
                     features: ['MP3 Untagged', '500,000 Streams'],
                     streamsLimit: 500000
                 });
-            } else if (beat.licenses && beat.licenses.find((l:any) => l.id === 'mp3')) {
-                // Support ancien format JSON direct
-                 licenses.push(beat.licenses.find((l:any) => l.id === 'mp3'));
             }
 
             // WAV
-            const pWav = row.price_wav || d.price_wav;
+            const pWav = row.price_wav || row.wav_price;
             if (pWav) {
                 licenses.push({
                     id: 'wav',
@@ -90,12 +91,10 @@ export default async function handler(
                     features: ['WAV Untagged', 'Unlimited Streams'],
                     streamsLimit: 'Unlimited'
                 });
-            } else if (beat.licenses && beat.licenses.find((l:any) => l.id === 'wav')) {
-                 licenses.push(beat.licenses.find((l:any) => l.id === 'wav'));
             }
 
             // TRACKOUT
-            const pTrackout = row.price_trackout || d.price_trackout;
+            const pTrackout = row.price_trackout || row.trackout_price;
             if (pTrackout) {
                 licenses.push({
                     id: 'trackout',
@@ -105,12 +104,10 @@ export default async function handler(
                     features: ['All Stems (WAV)', 'Unlimited Streams'],
                     streamsLimit: 'Unlimited'
                 });
-            } else if (beat.licenses && beat.licenses.find((l:any) => l.id === 'trackout')) {
-                 licenses.push(beat.licenses.find((l:any) => l.id === 'trackout'));
             }
 
             // EXCLUSIVE
-            const pExclu = row.price_exclusive || d.price_exclusive;
+            const pExclu = row.price_exclusive || row.exclusive_price;
             if (pExclu) {
                 licenses.push({
                     id: 'exclusive',
@@ -120,11 +117,9 @@ export default async function handler(
                     features: ['Full Ownership', 'Publishing 50/50'],
                     streamsLimit: 'Unlimited'
                 });
-            } else if (beat.licenses && beat.licenses.find((l:any) => l.id === 'exclusive')) {
-                 licenses.push(beat.licenses.find((l:any) => l.id === 'exclusive'));
             }
 
-            // Fallback ultime si aucune licence trouvée
+            // Fallback ultime si aucune licence trouvée (pour affichage propre)
             if (licenses.length === 0) {
                  licenses.push({
                     id: 'mp3',
@@ -159,16 +154,6 @@ export default async function handler(
       if (!beat.id) beat.id = `beat-${Date.now()}`;
       const beatId = beat.id;
       
-      // On s'assure que les prix sont dans le JSON pour le mapping GET
-      if (beat.licenses) {
-          beat.licenses.forEach((l: any) => {
-              if (l.id === 'mp3') beat.price_mp3 = l.price;
-              if (l.id === 'wav') beat.price_wav = l.price;
-              if (l.id === 'trackout') beat.price_trackout = l.price;
-              if (l.id === 'exclusive') beat.price_exclusive = l.price;
-          });
-      }
-
       const beatJson = JSON.stringify(beat);
 
       await sql`
