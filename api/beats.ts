@@ -20,7 +20,6 @@ export default async function handler(
     await sql`CREATE TABLE IF NOT EXISTS beats (id TEXT PRIMARY KEY, data JSONB)`;
     
     // 2. Migration Auto : Création des colonnes SQL si elles manquent
-    // Cela garantit que les champs existent pour être lus/écrits
     await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS title TEXT`;
     await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS bpm INTEGER`;
     await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS cover_url TEXT`;
@@ -47,65 +46,80 @@ export default async function handler(
       
       const enrichedBeats = rows.map((row) => {
         try {
-            // Lecture exclusive des colonnes SQL
-            const title = row.title || "Sans titre";
+            // RÉCUPÉRATION HYBRIDE : SQL (Prioritaire) > JSON (Fallback pour anciens beats)
+            const d = row.data || {}; // Données JSON legacy
+
+            const title = row.title || d.title || d.name || d.nom || d.titre || "Sans titre";
+            const bpm = row.bpm ? Number(row.bpm) : (d.bpm ? Number(d.bpm) : null);
+            const coverUrl = row.cover_url || d.coverUrl || d.cover || d.image || d.imageUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80";
             
-            // Gestion safe des tags (parfois retournés en string postgres "{a,b}")
+            // Dates
+            const dateStr = row.created_at || d.date || new Date().toISOString();
+            
+            // Fichiers
+            const mp3Url = row.mp3_url || d.mp3Url || d.mp3_url || null;
+            const wavUrl = row.wav_url || d.wavUrl || d.wav_url || null;
+            const stemsUrl = row.stems_url || d.stemsUrl || d.stems_url || null;
+            const youtubeId = row.youtube_id || d.youtubeId || d.youtube_id || null;
+
+            // Gestion safe des tags
             let tags: string[] = [];
-            if (Array.isArray(row.tags)) {
+            if (row.tags && Array.isArray(row.tags) && row.tags.length > 0) {
                 tags = row.tags;
             } else if (typeof row.tags === 'string') {
-                // Nettoyage du format {tag1,tag2} si nécessaire
                 tags = row.tags.replace(/^{|}$/g, '').split(',').map((s:string) => s.trim()).filter(Boolean);
+            } else if (d.tags) {
+                 // Fallback JSON
+                 tags = Array.isArray(d.tags) ? d.tags : (typeof d.tags === 'string' ? d.tags.split(',') : []);
             }
 
             const beat: any = {
                 id: row.id,
-                title: title,
-                bpm: row.bpm ? Number(row.bpm) : null,
-                coverUrl: row.cover_url || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80",
-                date: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
-                
-                mp3Url: row.mp3_url || null,
-                wavUrl: row.wav_url || null,
-                stemsUrl: row.stems_url || null,
-                youtubeId: row.youtube_id || null,
-                tags: tags
+                title, bpm, coverUrl, date: new Date(dateStr).toISOString(),
+                mp3Url, wavUrl, stemsUrl, youtubeId, tags
             };
 
-            // Reconstruction des licences depuis les colonnes de prix
+            // Reconstruction des licences (SQL > JSON > Default)
             const licenses = [];
             
-            if (row.price_mp3) {
+            // MP3
+            const pMp3 = row.price_mp3 || d.price_mp3 || d.mp3_price || d.price_lease;
+            if (pMp3) {
                 licenses.push({
-                    id: 'mp3', name: 'MP3 Lease', price: Number(row.price_mp3),
+                    id: 'mp3', name: 'MP3 Lease', price: Number(pMp3),
                     fileType: 'MP3', features: ['MP3 Untagged', '500,000 Streams'], streamsLimit: 500000
                 });
             } else {
-                // Fallback display par défaut
+                 // Fallback si pas de prix trouvé mais qu'on veut afficher quelque chose
                  licenses.push({
                     id: 'mp3', name: 'MP3 Lease', price: 29.99,
                     fileType: 'MP3', features: ['MP3 Untagged', '500,000 Streams'], streamsLimit: 500000
                 });
             }
 
-            if (row.price_wav) {
+            // WAV
+            const pWav = row.price_wav || d.price_wav || d.wav_price;
+            if (pWav) {
                 licenses.push({
-                    id: 'wav', name: 'WAV Lease', price: Number(row.price_wav),
+                    id: 'wav', name: 'WAV Lease', price: Number(pWav),
                     fileType: 'WAV', features: ['WAV Untagged', 'Unlimited Streams'], streamsLimit: 'Unlimited'
                 });
             }
 
-            if (row.price_trackout) {
+            // TRACKOUT
+            const pTrackout = row.price_trackout || d.price_trackout || d.trackout_price;
+            if (pTrackout) {
                 licenses.push({
-                    id: 'trackout', name: 'Trackout Lease', price: Number(row.price_trackout),
+                    id: 'trackout', name: 'Trackout Lease', price: Number(pTrackout),
                     fileType: 'TRACKOUT', features: ['All Stems (WAV)', 'Unlimited Streams'], streamsLimit: 'Unlimited'
                 });
             }
 
-            if (row.price_exclusive) {
+            // EXCLUSIVE
+            const pExclu = row.price_exclusive || d.price_exclusive || d.exclusive_price;
+            if (pExclu) {
                 licenses.push({
-                    id: 'exclusive', name: 'Exclusive Rights', price: Number(row.price_exclusive),
+                    id: 'exclusive', name: 'Exclusive Rights', price: Number(pExclu),
                     fileType: 'EXCLUSIVE', features: ['Full Ownership', 'Publishing 50/50'], streamsLimit: 'Unlimited'
                 });
             }
@@ -145,7 +159,7 @@ export default async function handler(
       const pTrackout = beat.price_trackout || 99.99;
       const pExclu = beat.price_exclusive || 499.99;
 
-      // On garde aussi le JSON en backup dans la colonne data
+      // On garde aussi le JSON complet en backup dans la colonne data
       const beatJson = JSON.stringify(beat);
 
       await sql`
