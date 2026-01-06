@@ -12,20 +12,22 @@ export default async function handler(
   const sql = neon(DB_URL);
 
   try {
-    // Création automatique de la table si elle n'existe pas
+    // 1. Création de la table si elle n'existe pas
     await sql`CREATE TABLE IF NOT EXISTS beats (
       id TEXT PRIMARY KEY,
       data JSONB,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`;
 
+    // 2. MIGRATION AUTOMATIQUE : On s'assure que la colonne created_at existe
+    // C'est cette ligne qui corrige votre erreur de connexion actuelle
+    await sql`ALTER TABLE beats ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`;
+
     if (request.method === 'GET') {
-      // On récupère aussi created_at pour servir de fallback si beat.date est vide
       const beats = await sql`SELECT data, created_at FROM beats ORDER BY created_at ASC;`;
       
       const enrichedBeats = beats.map((row) => {
         const beatData = row.data;
-        // Si le champ date n'existe pas dans le JSON, on utilise created_at de la base
         if (!beatData.date && row.created_at) {
           beatData.date = row.created_at;
         }
@@ -38,17 +40,14 @@ export default async function handler(
     if (request.method === 'POST') {
       const beat = request.body;
       
-      // Validation minimale
       if (!beat) {
         return response.status(400).json({ error: 'Données invalides' });
       }
 
-      // GÉNÉRATION ID AUTOMATIQUE si manquant
       if (!beat.id) {
         beat.id = randomUUID();
       }
 
-      // AJOUT DE LA DATE si manquante dans l'objet JSON
       if (!beat.date) {
         beat.date = new Date().toISOString();
       }

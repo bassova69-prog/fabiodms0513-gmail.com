@@ -14,6 +14,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`;
 
+    // Migration de sécurité
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`;
+
     if (request.method === 'GET') {
       const rows = await sql`SELECT data FROM events ORDER BY created_at ASC;`;
       return response.status(200).json(rows.map(r => r.data));

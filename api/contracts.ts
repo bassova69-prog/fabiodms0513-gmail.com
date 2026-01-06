@@ -13,6 +13,9 @@ export default async function handler(request: VercelRequest, response: VercelRe
       data JSONB,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );`;
+    
+    // Migration de sécurité
+    await sql`ALTER TABLE contracts ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`;
 
     if (request.method === 'GET') {
       const rows = await sql`SELECT data FROM contracts ORDER BY created_at DESC;`;
