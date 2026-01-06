@@ -31,6 +31,7 @@ export interface Beat {
   licenses: License[];
   youtubeId?: string;
   description?: string;
+  date?: string; // Ajout du champ date
 }
 
 export interface Masterclass {

@@ -20,21 +20,37 @@ export default async function handler(
     );`;
 
     if (request.method === 'GET') {
-      const beats = await sql`SELECT data FROM beats ORDER BY created_at ASC;`;
-      return response.status(200).json(beats.map((row) => row.data));
+      // On récupère aussi created_at pour servir de fallback si beat.date est vide
+      const beats = await sql`SELECT data, created_at FROM beats ORDER BY created_at ASC;`;
+      
+      const enrichedBeats = beats.map((row) => {
+        const beatData = row.data;
+        // Si le champ date n'existe pas dans le JSON, on utilise created_at de la base
+        if (!beatData.date && row.created_at) {
+          beatData.date = row.created_at;
+        }
+        return beatData;
+      });
+
+      return response.status(200).json(enrichedBeats);
     }
 
     if (request.method === 'POST') {
       const beat = request.body;
       
-      // Validation minimale : on a besoin au moins de l'objet beat
+      // Validation minimale
       if (!beat) {
         return response.status(400).json({ error: 'Données invalides' });
       }
 
-      // GÉNÉRATION ID AUTOMATIQUE si manquant (Support du "id non obligatoire")
+      // GÉNÉRATION ID AUTOMATIQUE si manquant
       if (!beat.id) {
         beat.id = randomUUID();
+      }
+
+      // AJOUT DE LA DATE si manquante dans l'objet JSON
+      if (!beat.date) {
+        beat.date = new Date().toISOString();
       }
 
       await sql`
