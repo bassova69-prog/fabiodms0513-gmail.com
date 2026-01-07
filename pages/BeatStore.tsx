@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BeatCard } from '../components/BeatCard';
-import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw } from 'lucide-react';
+import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Beat, StorePromotion, License } from '../types';
 import { getAllBeats, getSetting } from '../services/dbService';
@@ -18,39 +18,41 @@ export const BeatStore: React.FC = () => {
   const [promo, setPromo] = useState<StorePromotion | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   const [selectedBeatForPurchase, setSelectedBeatForPurchase] = useState<Beat | null>(null);
 
-  // Chargement des beats (UNIQUEMENT NEON)
   const loadBeats = async () => {
     setIsLoading(true);
+    setErrorMsg(null);
     try {
       const savedCustomBeats = await getAllBeats();
       
       if (Array.isArray(savedCustomBeats)) {
-        // ON ACCEPTE TOUT CE QUI A UN ID. L'API S'OCCUPE DE METTRE UN TITRE PAR DÉFAUT SI VIDE.
-        // On évite juste les objets nuls/undefined.
-        const validBeats = savedCustomBeats.filter(b => b && typeof b === 'object');
-        
-        const allBeats = [...validBeats]; 
-        // Note: Le tri est déjà fait par l'API normalement, mais on garde l'ordre reçu
-        
-        setBeats(allBeats);
+        const validBeats = savedCustomBeats.filter(b => b && typeof b === 'object' && b.id);
+        setBeats(validBeats);
         setFilteredBeats(prev => {
           if (searchTerm) return prev; 
-          return allBeats;
+          return validBeats;
         });
       } else {
         setBeats([]);
         setFilteredBeats([]);
+        setErrorMsg("Impossible de récupérer le catalogue (Erreur API).");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error loading beats:", e);
       setBeats([]);
       setFilteredBeats([]);
+      setErrorMsg("Erreur de connexion : " + e.message);
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const handleForceRefresh = () => {
+      localStorage.removeItem('fabio_data_beats'); 
+      loadBeats();
   };
 
   const checkPromo = useCallback(async () => {
@@ -75,43 +77,24 @@ export const BeatStore: React.FC = () => {
     try {
       const rawDbPromo = await getSetting<any>('promo');
       let dbPromo: StorePromotion | null = rawDbPromo;
-
       if (typeof rawDbPromo === 'string') {
-          try {
-              dbPromo = JSON.parse(rawDbPromo);
-          } catch (e) {
-              console.error("Erreur parsing promo JSON:", e);
-          }
+          try { dbPromo = JSON.parse(rawDbPromo); } catch (e) {}
       }
-
-      if (dbPromo && dbPromo.isActive) {
-         setPromo(dbPromo);
-      } else {
-         setPromo(null);
-      }
-    } catch (err) {
-      console.error("Impossible de synchroniser la promo:", err);
-    }
+      if (dbPromo && dbPromo.isActive) setPromo(dbPromo);
+      else setPromo(null);
+    } catch (err) {}
   }, [searchParams]);
 
   useEffect(() => {
     loadBeats();
     checkPromo();
-
     const intervalId = setInterval(() => {
-        if (!searchParams.get('promo')) {
-            checkPromo();
-        }
+        if (!searchParams.get('promo')) checkPromo();
     }, 5000);
-
     const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-            checkPromo();
-            loadBeats();
-        }
+        if (document.visibilityState === 'visible') { checkPromo(); loadBeats(); }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
-
     return () => {
         clearInterval(intervalId);
         document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -144,20 +127,16 @@ export const BeatStore: React.FC = () => {
 
   const handleAddToCart = (e: React.MouseEvent, beat: Beat, license: License) => {
     e.stopPropagation();
-    
     let finalPrice = license.price;
-
     if (promo && promo.isActive) {
       const isGlobal = promo.scope === 'GLOBAL';
       const isTargeted = promo.scope === 'SPECIFIC' && (promo.targetBeatIds?.includes(beat.id) ?? false);
-
       if (isGlobal || isTargeted) {
         if (promo.type === 'PERCENTAGE' || isTargeted) {
           finalPrice = Number((license.price * (1 - promo.discountPercentage / 100)).toFixed(2));
         }
       }
     }
-
     const finalLicense = { ...license, price: finalPrice };
     addToCart(beat, finalLicense);
     closePurchaseModal();
@@ -175,18 +154,13 @@ export const BeatStore: React.FC = () => {
 
   return (
     <div className="pb-28 relative">
-      {/* BANDEAU PROMO */}
       {promo && promo.isActive && !selectedBeatForPurchase && (
         <div className={`mb-6 p-0.5 rounded-2xl shadow-[0_10px_40px_rgba(220,38,38,0.2)] animate-in slide-in-from-top-4 mx-2 mt-4 relative z-0 ${
-            promo.type === 'BULK_DEAL' 
-            ? 'bg-gradient-to-r from-orange-500 to-amber-500' 
-            : 'bg-gradient-to-r from-red-600 to-amber-600'
+            promo.type === 'BULK_DEAL' ? 'bg-gradient-to-r from-orange-500 to-amber-500' : 'bg-gradient-to-r from-red-600 to-amber-600'
         }`}>
             <div className="bg-[#120a05] rounded-[14px] p-4 flex items-center justify-center gap-4 relative overflow-hidden group">
                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${
-                    promo.type === 'BULK_DEAL'
-                    ? 'bg-gradient-to-r from-orange-500/10 to-amber-500/10'
-                    : 'bg-gradient-to-r from-red-600/10 to-amber-600/10'
+                    promo.type === 'BULK_DEAL' ? 'bg-gradient-to-r from-orange-500/10 to-amber-500/10' : 'bg-gradient-to-r from-red-600/10 to-amber-600/10'
                 }`}></div>
                 <Zap className="w-5 h-5 text-amber-500 animate-pulse shrink-0" />
                 <p className="text-white font-black uppercase tracking-tighter text-sm md:text-base italic text-center z-10">
@@ -201,7 +175,6 @@ export const BeatStore: React.FC = () => {
         </div>
       )}
 
-      {/* HEADER & FILTERS */}
       {!selectedBeatForPurchase && (
         <div className="sticky top-14 bg-[#0f0f0f] z-[49] py-6 -mx-4 px-6 md:mx-0 md:px-0 border-b border-[#2a2a2a] mb-12 shadow-2xl transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -223,9 +196,9 @@ export const BeatStore: React.FC = () => {
                    </div>
                    
                    <button 
-                    onClick={loadBeats}
+                    onClick={handleForceRefresh}
                     className="flex items-center justify-center gap-2 bg-[#1a120b] hover:bg-[#2a1e16] text-[#d4a373] px-3 py-2.5 rounded-xl border border-[#3d2b1f] transition-colors shrink-0"
-                    title="Rafraîchir"
+                    title="Forcer le rechargement"
                    >
                       <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                    </button>
@@ -243,7 +216,6 @@ export const BeatStore: React.FC = () => {
         </div>
       )}
 
-      {/* GRID */}
       <div className="relative z-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-6">
           {filteredBeats.length > 0 ? (
             filteredBeats.map((beat) => (
@@ -256,24 +228,36 @@ export const BeatStore: React.FC = () => {
               </div>
             ))
           ) : (
-             <div className="col-span-full py-32 text-center flex flex-col items-center justify-center opacity-40 border-2 border-dashed border-[#2a2a2a] rounded-[2rem]">
-                <Music className="w-16 h-16 mb-4 text-[#3d2b1f]" />
-                <p className="font-bold text-xl text-[#8c7a6b]">
-                   {isLoading ? "Chargement des beats..." : "Aucun beat trouvé"}
-                </p>
-                {!isLoading && <p className="text-sm italic text-[#5c4a3e] mt-2">Essayez de rafraîchir ou vérifiez votre connexion.</p>}
+             <div className="col-span-full py-32 text-center flex flex-col items-center justify-center border-2 border-dashed border-[#2a2a2a] rounded-[2rem] bg-[#1a120b]">
+                {isLoading ? (
+                    <>
+                         <RefreshCw className="w-16 h-16 mb-4 text-amber-500 animate-spin" />
+                         <p className="font-bold text-xl text-white">Chargement du studio...</p>
+                    </>
+                ) : (
+                    <>
+                        <AlertTriangle className="w-16 h-16 mb-4 text-[#3d2b1f]" />
+                        <p className="font-bold text-xl text-[#8c7a6b] mb-2">
+                           {errorMsg ? "Erreur de chargement" : "Aucun beat trouvé"}
+                        </p>
+                        {errorMsg && <p className="text-red-400 text-sm mb-4">{errorMsg}</p>}
+                        
+                        <button onClick={handleForceRefresh} className="bg-amber-500 text-black font-black px-6 py-3 rounded-xl hover:bg-white transition-all uppercase text-xs tracking-widest mt-4">
+                            Forcer la mise à jour
+                        </button>
+                    </>
+                )}
              </div>
           )}
       </div>
 
-      {/* --- MODAL LICENCES --- */}
       {selectedBeatForPurchase && (
         <div className="fixed inset-0 top-[56px] z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-md" onClick={closePurchaseModal} />
           <div className="relative w-full max-w-4xl bg-[#1a120b] border border-[#3d2b1f] rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
             <div className="p-6 border-b border-[#3d2b1f] flex justify-between items-center bg-[#120a05]">
               <div className="flex items-center gap-4">
-                <img src={selectedBeatForPurchase.coverUrl} className="w-16 h-16 rounded-xl object-cover border border-[#3d2b1f]" alt={selectedBeatForPurchase.title} />
+                <img src={selectedBeatForPurchase.cover_url} className="w-16 h-16 rounded-xl object-cover border border-[#3d2b1f]" alt={selectedBeatForPurchase.title} />
                 <div>
                   <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">{selectedBeatForPurchase.title}</h2>
                   <p className="text-amber-500 text-xs font-bold uppercase tracking-widest mt-1">Sélectionnez votre licence</p>
@@ -290,9 +274,7 @@ export const BeatStore: React.FC = () => {
                     const discountedPrice = isValid && promo 
                         ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) 
                         : lic.price;
-                    
                     const isExclusive = lic.fileType === 'EXCLUSIVE';
-                    
                     return (
                       <div 
                         key={lic.id} 

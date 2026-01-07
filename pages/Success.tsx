@@ -14,10 +14,8 @@ export const Success: React.FC = () => {
   const [showDownloadTip, setShowDownloadTip] = useState(false);
   const processedRef = useRef(false);
   
-  // Récupération des articles achetés depuis l'état de navigation
   const purchasedItems = location.state?.items || [];
 
-  // ENREGISTREMENT AUTOMATIQUE DANS LA COMPTABILITÉ
   useEffect(() => {
     if (purchasedItems.length > 0 && !processedRef.current) {
       const ACCOUNTING_STORAGE_KEY = 'fabio_pro_accounting_v1';
@@ -25,10 +23,8 @@ export const Success: React.FC = () => {
       try {
         const savedTransactions = JSON.parse(localStorage.getItem(ACCOUNTING_STORAGE_KEY) || '[]');
         
-        // Création des transactions pour chaque beat acheté
         const newTransactions: Transaction[] = purchasedItems.map((item: any) => ({
-          id: `sale-${item.id}`, // Utilise l'ID unique de l'item du panier
-          // IMPORTANT: Utilisation du format ISO pour compatibilité backend parfaite
+          id: `sale-${item.id}`, 
           date: new Date().toISOString(), 
           label: `Vente: ${item.beat.title} (${item.license.name})`,
           customer: "Client Boutique Web",
@@ -38,15 +34,12 @@ export const Success: React.FC = () => {
           status: 'PAYÉ'
         }));
 
-        // Filtrer pour éviter les doublons
         const existingIds = new Set(savedTransactions.map((t: any) => t.id));
         const filteredNew = newTransactions.filter(nt => !existingIds.has(nt.id));
 
         if (filteredNew.length > 0) {
           const updatedTransactions = [...filteredNew, ...savedTransactions];
           localStorage.setItem(ACCOUNTING_STORAGE_KEY, JSON.stringify(updatedTransactions));
-
-          // Sauvegarde dans Neon DB
           filteredNew.forEach(t => {
             saveTransaction(t).catch(err => console.warn("DB Save failed for transaction", t.id, err));
           });
@@ -62,18 +55,18 @@ export const Success: React.FC = () => {
   const handleDownload = (item: any) => {
     const { beat, license, id } = item;
     
-    // Logique de sélection du bon fichier en fonction de la licence
-    let fileUrl = beat.audioUrl; // Par défaut
+    // Logique mise à jour avec snake_case
+    let fileUrl = beat.mp3_url; // Par défaut
     let extension = 'mp3';
 
-    if (license.fileType === 'WAV' && beat.wavUrl) {
-      fileUrl = beat.wavUrl;
+    if (license.fileType === 'WAV' && beat.wav_url) {
+      fileUrl = beat.wav_url;
       extension = 'wav';
-    } else if (license.fileType === 'TRACKOUT' && beat.stemsUrl) {
-      fileUrl = beat.stemsUrl;
+    } else if (license.fileType === 'TRACKOUT' && beat.stems_url) {
+      fileUrl = beat.stems_url;
       extension = 'zip';
-    } else if (beat.mp3Url) {
-      fileUrl = beat.mp3Url;
+    } else if (beat.mp3_url) {
+      fileUrl = beat.mp3_url;
       extension = 'mp3';
     }
 

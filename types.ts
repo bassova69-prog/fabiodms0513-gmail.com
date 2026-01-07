@@ -23,15 +23,20 @@ export interface Beat {
   bpm: number;
   key?: string;
   tags: string[];
-  audioUrl?: string; // Fallback / Preview
-  mp3Url?: string;   // Fichier MP3 final
-  wavUrl?: string;   // Fichier WAV final
-  stemsUrl?: string; // Dossier Stems (souvent ZIP)
-  coverUrl: string;
+  
+  // Format Base de données (snake_case)
+  cover_url: string; 
+  mp3_url?: string;   
+  wav_url?: string;   
+  stems_url?: string; 
+  youtube_id?: string;
+  
+  // Données calculées / UI
+  audioUrl?: string; // Gardé pour compatibilité lecteur, souvent alias de mp3_url
   licenses: License[];
-  youtubeId?: string;
   description?: string;
-  date?: string; // Ajout du champ date
+  date?: string;
+  created_at?: string;
 }
 
 export interface Masterclass {

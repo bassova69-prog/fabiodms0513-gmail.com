@@ -13,13 +13,11 @@ interface BeatCardProps {
 export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
 
-  // Protection anti-crash si l'objet beat est null ou undefined
   if (!beat) return null;
 
   const isCurrent = currentBeat?.id === beat.id;
   const isCurrentAndPlaying = isCurrent && isPlaying;
   
-  // Protection pour les licences : si vide ou undefined, on fallback sur 0
   const originalLowestPrice = beat.licenses?.[0]?.price || 0;
   
   const lowestPrice = promo && promo.isActive
@@ -35,13 +33,11 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
     onPurchase(beat);
   };
 
-  // Helper date
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
   };
 
-  // Protection pour les tags : on s'assure que c'est un tableau
   const displayTags = Array.isArray(beat.tags) ? beat.tags.slice(0, 3) : [];
 
   return (
@@ -49,17 +45,15 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
       onClick={handleCardClick}
       className={`group relative flex flex-col bg-[#1a120b] rounded-xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-900/20 cursor-pointer h-full ${isCurrent ? 'border-amber-500 shadow-lg shadow-amber-900/10' : 'border-[#3d2b1f] hover:border-amber-500/50'}`}
     >
-      {/* --- IMAGE AREA (Compact) --- */}
       <div className="relative aspect-video w-full overflow-hidden bg-[#2a1e16]">
         <img 
-          src={beat.coverUrl || 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80'} 
+          src={beat.cover_url || 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80'} 
           alt={beat.title || 'Beat'} 
           className={`w-full h-full object-cover transition-transform duration-700 ${isCurrentAndPlaying ? 'scale-110 saturate-150' : 'group-hover:scale-105'}`}
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-[#1a120b] via-transparent to-transparent opacity-60"></div>
 
-        {/* Play Button Compact */}
         <div className={`absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[1px] transition-all duration-300 ${isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
              <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-2xl transform transition-all duration-300 ${isCurrentAndPlaying ? 'bg-amber-500 text-black scale-110' : 'bg-white/10 border border-white/20 text-white hover:bg-amber-500 hover:text-black hover:scale-110 hover:border-transparent'}`}>
                {isCurrentAndPlaying ? (
@@ -74,7 +68,6 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
              </div>
         </div>
 
-        {/* Badges Compact */}
         <div className="absolute top-2 left-2 right-2 flex justify-between">
           <div className="flex gap-1">
             {promo && promo.isActive && (
@@ -93,7 +86,6 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
         </div>
       </div>
       
-      {/* --- INFO AREA Compact --- */}
       <div className="p-3 flex flex-col flex-1 gap-2 relative">
           {isCurrentAndPlaying && (
                <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500/20">
@@ -109,8 +101,7 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
                   <span className="text-[#8c7a6b] text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
                       Fabio DMS {beat.key && <span className="text-[#5c4a3e]">• {beat.key}</span>}
                   </span>
-                  {/* Affichage conditionnel de l'icône Youtube, ne bloque pas le rendu si absent */}
-                  {beat.youtubeId && <Youtube className="w-3 h-3 text-red-600 opacity-80" />}
+                  {beat.youtube_id && <Youtube className="w-3 h-3 text-red-600 opacity-80" />}
               </div>
           </div>
 

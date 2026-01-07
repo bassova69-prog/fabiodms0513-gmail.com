@@ -76,8 +76,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       audioRef.current = null;
     }
 
-    if (beat.audioUrl) {
-      const audio = new Audio(beat.audioUrl);
+    // Support both snake_case and deprecated camelCase for audio source
+    const src = beat.mp3_url || beat.audioUrl;
+
+    if (src) {
+      const audio = new Audio(src);
       audio.volume = volume;
       audioRef.current = audio;
       

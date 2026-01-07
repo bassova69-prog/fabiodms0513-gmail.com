@@ -10,20 +10,18 @@ export const UploadBeat: React.FC = () => {
   const [promo, setPromo] = useState<StorePromotion>({ isActive: false, message: '', discountPercentage: 0, scope: 'GLOBAL' });
   const [isSaving, setIsSaving] = useState(false);
 
-  // Form State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     bpm: 120,
-    coverUrl: '',
+    cover_url: '',
     tags: '',
-    mp3Url: '',
-    wavUrl: '',
-    stemsUrl: '',
-    youtubeId: ''
+    mp3_url: '',
+    wav_url: '',
+    stems_url: '',
+    youtube_id: ''
   });
   
-  // Prices State
   const [prices, setPrices] = useState({
     mp3: 29.99,
     wav: 49.99,
@@ -51,8 +49,8 @@ export const UploadBeat: React.FC = () => {
   const resetForm = () => {
     setEditingId(null);
     setFormData({
-      title: '', bpm: 120, coverUrl: '', tags: '',
-      mp3Url: '', wavUrl: '', stemsUrl: '', youtubeId: ''
+      title: '', bpm: 120, cover_url: '', tags: '',
+      mp3_url: '', wav_url: '', stems_url: '', youtube_id: ''
     });
     setPrices({ mp3: 29.99, wav: 49.99, trackout: 99.99, exclusive: 499.99 });
   };
@@ -62,15 +60,14 @@ export const UploadBeat: React.FC = () => {
     setFormData({
       title: beat.title,
       bpm: beat.bpm,
-      coverUrl: beat.coverUrl,
+      cover_url: beat.cover_url,
       tags: beat.tags.join(', '),
-      mp3Url: beat.mp3Url || '',
-      wavUrl: beat.wavUrl || '',
-      stemsUrl: beat.stemsUrl || '',
-      youtubeId: beat.youtubeId || ''
+      mp3_url: beat.mp3_url || '',
+      wav_url: beat.wav_url || '',
+      stems_url: beat.stems_url || '',
+      youtube_id: beat.youtube_id || ''
     });
     
-    // Populate prices if available in licenses
     const newPrices = { ...prices };
     beat.licenses.forEach(l => {
         if(l.id === 'mp3') newPrices.mp3 = l.price;
@@ -105,21 +102,19 @@ export const UploadBeat: React.FC = () => {
             id: editingId || undefined,
             title: formData.title,
             bpm: Number(formData.bpm),
-            coverUrl: formData.coverUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80",
+            cover_url: formData.cover_url || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&q=80",
             tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-            mp3Url: formData.mp3Url,
-            wavUrl: formData.wavUrl,
-            stemsUrl: formData.stemsUrl,
-            youtubeId: formData.youtubeId,
+            mp3_url: formData.mp3_url,
+            wav_url: formData.wav_url,
+            stems_url: formData.stems_url,
+            youtube_id: formData.youtube_id,
             licenses: licenses,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            price_mp3: prices.mp3,
+            price_wav: prices.wav,
+            price_trackout: prices.trackout,
+            price_exclusive: prices.exclusive
         };
-
-        // Flatten prices for simpler DB mapping if needed
-        beatPayload.price_mp3 = prices.mp3;
-        beatPayload.price_wav = prices.wav;
-        beatPayload.price_trackout = prices.trackout;
-        beatPayload.price_exclusive = prices.exclusive;
 
         await saveBeat(beatPayload);
         await loadData();
@@ -133,28 +128,20 @@ export const UploadBeat: React.FC = () => {
   };
 
   const toggleBeatSelection = async (beatId: string) => {
-     // Cette fonction permet d'ajouter/retirer un beat de la promo ciblée
      if (!promo) return;
-     
      const currentIds = promo.targetBeatIds || [];
      let newIds;
-     
      if (currentIds.includes(beatId)) {
          newIds = currentIds.filter(id => id !== beatId);
      } else {
          newIds = [...currentIds, beatId];
      }
-     
      const updatedPromo = { ...promo, targetBeatIds: newIds };
      setPromo(updatedPromo);
-     // Note: Pour persister, on pourrait décommenter:
-     // await saveSetting('promo', updatedPromo);
   };
 
   return (
     <div className="pb-20 max-w-5xl mx-auto">
-      
-      {/* HEADER & FORMULAIRE */}
       <div className="bg-[#1a120b] p-6 md:p-8 rounded-3xl border border-[#3d2b1f] mb-12 shadow-2xl">
          <div className="flex justify-between items-start mb-8">
             <h2 className="text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
@@ -187,15 +174,15 @@ export const UploadBeat: React.FC = () => {
                     </div>
                     <div>
                         <label className="text-[10px] uppercase font-bold text-[#8c7a6b] tracking-widest mb-1 block">Cover URL</label>
-                        <input value={formData.coverUrl} onChange={e => setFormData({...formData, coverUrl: e.target.value})} className="w-full bg-[#120a05] border border-[#3d2b1f] rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none text-xs" placeholder="https://..." />
+                        <input value={formData.cover_url} onChange={e => setFormData({...formData, cover_url: e.target.value})} className="w-full bg-[#120a05] border border-[#3d2b1f] rounded-xl px-4 py-3 text-white focus:border-amber-500 outline-none text-xs" placeholder="https://..." />
                     </div>
                 </div>
 
                 <div className="space-y-4 p-4 bg-[#120a05] rounded-xl border border-[#3d2b1f]">
                     <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-2">Liens Fichiers Audio</h3>
-                    <input value={formData.mp3Url} onChange={e => setFormData({...formData, mp3Url: e.target.value})} className="w-full bg-[#1a120b] border border-[#3d2b1f] rounded-lg px-3 py-2 text-white text-xs focus:border-blue-500 outline-none mb-2" placeholder="Lien MP3 Direct" />
-                    <input value={formData.wavUrl} onChange={e => setFormData({...formData, wavUrl: e.target.value})} className="w-full bg-[#1a120b] border border-[#3d2b1f] rounded-lg px-3 py-2 text-white text-xs focus:border-cyan-500 outline-none mb-2" placeholder="Lien WAV Direct" />
-                    <input value={formData.stemsUrl} onChange={e => setFormData({...formData, stemsUrl: e.target.value})} className="w-full bg-[#1a120b] border border-[#3d2b1f] rounded-lg px-3 py-2 text-white text-xs focus:border-orange-500 outline-none" placeholder="Lien ZIP Stems" />
+                    <input value={formData.mp3_url} onChange={e => setFormData({...formData, mp3_url: e.target.value})} className="w-full bg-[#1a120b] border border-[#3d2b1f] rounded-lg px-3 py-2 text-white text-xs focus:border-blue-500 outline-none mb-2" placeholder="Lien MP3 Direct" />
+                    <input value={formData.wav_url} onChange={e => setFormData({...formData, wav_url: e.target.value})} className="w-full bg-[#1a120b] border border-[#3d2b1f] rounded-lg px-3 py-2 text-white text-xs focus:border-cyan-500 outline-none mb-2" placeholder="Lien WAV Direct" />
+                    <input value={formData.stems_url} onChange={e => setFormData({...formData, stems_url: e.target.value})} className="w-full bg-[#1a120b] border border-[#3d2b1f] rounded-lg px-3 py-2 text-white text-xs focus:border-orange-500 outline-none" placeholder="Lien ZIP Stems" />
                 </div>
             </div>
 
@@ -225,7 +212,6 @@ export const UploadBeat: React.FC = () => {
          </form>
       </div>
 
-      {/* --- LISTE DES BEATS (SECTION DEMANDÉE PAR L'UTILISATEUR) --- */}
       <section className="mt-16">
         <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase flex items-center gap-2">
@@ -238,7 +224,6 @@ export const UploadBeat: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 gap-4">
-            {/* Message si aucun beat */}
             {myBeats.length === 0 && !isLoadingBeats && (
                 <div className="p-8 text-center border-2 border-dashed border-[#3d2b1f] rounded-2xl bg-[#1e1510]">
                     <Music className="w-12 h-12 text-[#3d2b1f] mx-auto mb-4" />
@@ -246,11 +231,9 @@ export const UploadBeat: React.FC = () => {
                 </div>
             )}
 
-            {/* Boucle d'affichage des cartes */}
             {myBeats.map(beat => {
                 const isInPromo = promo.isActive && (promo.scope === 'GLOBAL' || (promo.scope === 'SPECIFIC' && promo.targetBeatIds?.includes(beat.id)));
                 
-                // Extraction des prix pour affichage
                 const getPrice = (id: string) => beat.licenses?.find(l => l.id === id)?.price;
                 const mp3Price = getPrice('mp3');
                 const wavPrice = getPrice('wav');
@@ -258,7 +241,7 @@ export const UploadBeat: React.FC = () => {
 
                 return (
                 <div key={beat.id} className="bg-[#1e1510] border border-[#3d2b1f] p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-4 hover:border-amber-500/50 transition-colors group">
-                    <img src={beat.coverUrl} alt={beat.title} className="w-16 h-16 rounded-lg object-cover shadow-lg border border-[#3d2b1f]" />
+                    <img src={beat.cover_url} alt={beat.title} className="w-16 h-16 rounded-lg object-cover shadow-lg border border-[#3d2b1f]" />
                     <div className="flex-1 text-center sm:text-left">
                         <div className="flex flex-col sm:flex-row items-center gap-2 mb-1">
                             <h3 className="font-black text-white text-lg uppercase leading-none">{beat.title}</h3>
@@ -270,21 +253,20 @@ export const UploadBeat: React.FC = () => {
                             <span className="flex items-center gap-1"><Tag size={10} /> {beat.tags.slice(0,3).join(', ')}</span>
                         </div>
 
-                        {/* Affichage des prix en fonction des fichiers dispos */}
                         <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 mt-2">
-                                {beat.mp3Url && mp3Price && (
+                                {beat.mp3_url && mp3Price && (
                                     <div className="flex items-center gap-1 bg-[#120a05] border border-blue-900/30 px-2 py-1 rounded-md">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                                         <span className="text-[9px] font-bold text-blue-400">MP3 {mp3Price}€</span>
                                     </div>
                                 )}
-                                {beat.wavUrl && wavPrice && (
+                                {beat.wav_url && wavPrice && (
                                     <div className="flex items-center gap-1 bg-[#120a05] border border-cyan-900/30 px-2 py-1 rounded-md">
                                         <div className="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
                                         <span className="text-[9px] font-bold text-cyan-400">WAV {wavPrice}€</span>
                                     </div>
                                 )}
-                                {beat.stemsUrl && trackoutPrice && (
+                                {beat.stems_url && trackoutPrice && (
                                     <div className="flex items-center gap-1 bg-[#120a05] border border-orange-900/30 px-2 py-1 rounded-md">
                                         <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
                                         <span className="text-[9px] font-bold text-orange-400">STEMS {trackoutPrice}€</span>
@@ -293,14 +275,12 @@ export const UploadBeat: React.FC = () => {
                         </div>
                     </div>
                     
-                    {/* Selecteur Promo */}
                     {promo.isActive && promo.scope === 'SPECIFIC' && (
                         <div className="mr-0 sm:mr-4">
                             <button onClick={() => toggleBeatSelection(beat.id)} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${promo.targetBeatIds?.includes(beat.id) ? 'bg-amber-500 border-amber-500 text-black' : 'border-[#3d2b1f] hover:border-amber-500 text-transparent'}`}><CheckCircle2 size={16} /></button>
                         </div>
                     )}
                     
-                    {/* Actions */}
                     <div className="flex items-center gap-2 mt-2 sm:mt-0">
                             <button onClick={() => handleEdit(beat)} className="p-2 bg-[#120a05] text-[#8c7a6b] rounded-lg hover:text-white hover:bg-amber-600 transition-all border border-[#3d2b1f]"><Pencil size={16} /></button>
                             <button onClick={() => handleDelete(beat.id)} className="p-2 bg-[#120a05] text-[#8c7a6b] rounded-lg hover:text-white hover:bg-red-600 transition-all border border-[#3d2b1f]"><Trash2 size={16} /></button>

@@ -22,17 +22,12 @@ export const CartDrawer: React.FC = () => {
     if (cartItems.length === 0 || isProcessing) return;
     
     setIsProcessing(true);
-    
-    // On capture les items avant de vider le panier pour les passer à la page de succès
     const itemsToPass = [...cartItems];
 
-    // Simulation du paiement
     setTimeout(() => {
       setIsProcessing(false);
-      toggleCart(); // On ferme le drawer
-      clearCart();   // On vide le panier
-      
-      // Navigation vers la page de succès avec les données
+      toggleCart(); 
+      clearCart();
       navigate('/success', { state: { items: itemsToPass } });
     }, 1500);
   };
@@ -48,7 +43,6 @@ export const CartDrawer: React.FC = () => {
 
       <div className="fixed top-0 right-0 h-full w-full max-w-md bg-[#120a05] border-l border-[#3d2b1f] shadow-2xl z-[70] flex flex-col animate-in slide-in-from-right duration-300">
         
-        {/* HEADER */}
         <div className="p-6 border-b border-[#3d2b1f] flex justify-between items-center bg-[#1a120b]">
             <div className="flex items-center gap-3">
                 <ShoppingBag className="w-5 h-5 text-amber-500" />
@@ -66,7 +60,6 @@ export const CartDrawer: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto relative flex flex-col min-h-0 bg-[#0f0f0f]">
-            {/* PROCESSING OVERLAY */}
             {isProcessing && (
                 <div className="absolute inset-0 z-[75] bg-[#0f0f0f]/95 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
                     <Loader2 className="w-16 h-16 text-amber-500 animate-spin mb-6" />
@@ -75,7 +68,6 @@ export const CartDrawer: React.FC = () => {
                 </div>
             )}
 
-            {/* CART LIST */}
             <div className="p-6 space-y-4">
                 {cartItems.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center py-24 opacity-30">
@@ -87,7 +79,7 @@ export const CartDrawer: React.FC = () => {
                     cartItems.map((item) => (
                         <div key={item.id} className="flex gap-4 p-4 bg-[#1a120b] rounded-2xl border border-[#3d2b1f] animate-in fade-in slide-in-from-right-4">
                             <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden border border-[#3d2b1f] bg-black">
-                                <img src={item.beat?.coverUrl} className="w-full h-full object-cover" alt={item.beat?.title} />
+                                <img src={item.beat?.cover_url} className="w-full h-full object-cover" alt={item.beat?.title} />
                             </div>
                             <div className="flex-1 flex flex-col justify-between overflow-hidden">
                                 <div>
@@ -113,7 +105,6 @@ export const CartDrawer: React.FC = () => {
             </div>
         </div>
 
-        {/* FOOTER */}
         {cartItems.length > 0 && (
             <div className="p-8 bg-[#1a120b] border-t border-[#3d2b1f] space-y-6">
                 <div className="flex justify-between items-center text-[#fff8f0] text-2xl font-black italic tracking-tighter">

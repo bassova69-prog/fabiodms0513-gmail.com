@@ -45,10 +45,9 @@ export const Home: React.FC = () => {
   return (
     <div className="flex flex-col gap-14 pb-24">
       
-      {/* SECTION BANNIÈRE - STYLE STUDIO PRO */}
       <section className="relative h-[450px] md:h-[500px] rounded-[2rem] overflow-hidden group shadow-2xl border border-[#2a2a2a]">
         <img 
-          src={featuredBeat?.coverUrl || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop"} 
+          src={featuredBeat?.cover_url || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop"} 
           alt="Studio Banner" 
           className="absolute inset-0 w-full h-full object-cover opacity-60 saturate-[1.1] transition-transform duration-1000 group-hover:scale-105"
         />
@@ -93,7 +92,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* TARIFS BEATMAKING - GRID PRO */}
       <section className="px-2">
         <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
             <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
@@ -139,7 +137,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* MASTERCLASS SECTION */}
       <section className="px-2">
         <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
             <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
@@ -148,7 +145,6 @@ export const Home: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             {/* CARTE MASTERCLASS 1 */}
              <div className="relative rounded-[2rem] overflow-hidden border border-[#2a2a2a] bg-[#121212] flex flex-col md:flex-row group">
                 <div className="p-8 flex flex-col h-full w-full">
                     <div className="flex justify-between items-start mb-4">
@@ -170,7 +166,6 @@ export const Home: React.FC = () => {
                 </div>
              </div>
 
-             {/* CARTE MASTERCLASS 2 */}
              <div className="relative rounded-[2rem] overflow-hidden border border-[#2a2a2a] bg-[#121212] flex flex-col md:flex-row group">
                 <div className="p-8 flex flex-col h-full w-full">
                      <div className="flex justify-between items-start mb-4">
@@ -193,7 +188,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* SECTION DERNIERS BEATS */}
       <section className="px-2">
         <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
           <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">

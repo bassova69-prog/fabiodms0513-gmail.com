@@ -48,7 +48,6 @@ export const BottomPlayer: React.FC = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 h-20 bg-[#1a120b] border-t border-[#3d2b1f] z-50 flex items-center px-4 md:px-8 shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
       
-      {/* Barre de progression interactive */}
       <div 
         ref={progressBarRef}
         className="absolute -top-3 left-0 right-0 h-6 cursor-pointer group z-50 flex items-center"
@@ -65,7 +64,6 @@ export const BottomPlayer: React.FC = () => {
               className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg border-2 border-amber-500"
               style={{ left: `${progress}%`, marginLeft: '-8px' }}
             />
-            {/* Tooltip temps au survol */}
             {isHoveringProgress && (
               <div className="absolute -top-10 bg-black text-white text-[10px] px-2 py-1 rounded font-bold pointer-events-none" style={{ left: `${progress}%`, transform: 'translateX(-50%)' }}>
                 {formatTime(currentTime)} / {formatTime(duration)}
@@ -76,16 +74,14 @@ export const BottomPlayer: React.FC = () => {
       
       <div className="flex items-center w-full max-w-7xl mx-auto gap-4 md:gap-8 pt-1">
         
-        {/* Infos du morceau */}
         <div className="flex items-center gap-3 w-1/3 min-w-0">
-            <img src={currentBeat.coverUrl} alt="Cover" className="w-12 h-12 rounded bg-[#2a1e16] object-cover border border-[#3d2b1f]" />
+            <img src={currentBeat.cover_url} alt="Cover" className="w-12 h-12 rounded bg-[#2a1e16] object-cover border border-[#3d2b1f]" />
             <div className="flex flex-col overflow-hidden">
                 <span className="font-bold text-[#fff8f0] text-sm truncate">{currentBeat.title}</span>
                 <span className="text-amber-600 text-[10px] truncate font-black uppercase tracking-widest">Fabio DMS</span>
             </div>
         </div>
 
-        {/* Contrôles principaux */}
         <div className="flex flex-1 justify-center items-center gap-4 md:gap-6">
             <button onClick={prevTrack} className="text-[#8c7a6b] hover:text-white transition-colors p-2">
                 <SkipBack className="w-5 h-5 fill-current" />
@@ -101,7 +97,6 @@ export const BottomPlayer: React.FC = () => {
             </button>
         </div>
 
-        {/* Volume / Panier / Prix */}
         <div className="flex items-center justify-end w-1/3 gap-3">
              <div className="hidden lg:flex items-center gap-3 mr-4">
                 <button onClick={() => setVolume(volume > 0 ? 0 : 0.8)}>
