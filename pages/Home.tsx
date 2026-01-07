@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ARTIST_NAME } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, User, Video } from 'lucide-react';
+import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, User, Video, Youtube } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { getAllBeats } from '../services/dbService';
 import { Beat } from '../types';
@@ -54,7 +54,7 @@ export const Home: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/40 to-transparent"></div>
         
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-10">
-           <div className="animate-in slide-in-from-bottom-6 duration-700">
+           <div className="animate-in slide-in-from-bottom-6 duration-700 flex flex-col items-center">
                 <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase italic drop-shadow-2xl mb-2">
                   {ARTIST_NAME}
                 </h1>
@@ -62,7 +62,7 @@ export const Home: React.FC = () => {
                    Beatmaker & Producer
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                   {featuredBeat ? (
                     <button 
                       onClick={handlePlayFeatured} 
@@ -81,12 +81,14 @@ export const Home: React.FC = () => {
                     </button>
                   )}
                   
-                  <Link 
-                    to="/masterclass" 
-                    className="bg-black/60 backdrop-blur-md text-white font-black px-8 py-4 rounded-xl hover:bg-white hover:text-black transition-all border border-white/20 uppercase text-xs tracking-widest flex items-center justify-center gap-2 active:scale-95"
+                  <a 
+                    href="https://youtube.com" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#ff0000] text-white font-black px-8 py-4 rounded-xl hover:bg-[#cc0000] transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest shadow-lg active:scale-95"
                   >
-                      <GraduationCap className="w-5 h-5" /> MASTERCLASS
-                  </Link>
+                      <Youtube className="w-5 h-5 fill-current" /> MA CHAÎNE
+                  </a>
                 </div>
            </div>
         </div>

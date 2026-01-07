@@ -31,7 +31,13 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
     const data = await res.json();
     
     if (Array.isArray(data)) {
-        localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(data));
+        try {
+            localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(data));
+        } catch (storageError) {
+            // C'est ici que l'erreur "Quota exceeded" se produisait et bloquait tout.
+            // On log un avertissement mais on NE LANCE PAS d'erreur, pour que 'data' soit retourné.
+            console.warn(`[DB] Cache local plein pour ${endpoint} (Quota dépassé). Utilisation des données en direct uniquement.`);
+        }
     }
     return data;
   } catch (e: any) {
@@ -43,8 +49,6 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
     
     const local = localStorage.getItem(FALLBACK_PREFIX + endpoint);
     
-    // CHANGEMENT MAJEUR : Si pas de cache local, on renvoie l'erreur pour l'afficher sur le site
-    // Au lieu de retourner [] silencieusement
     if (!local) {
         throw e;
     }
@@ -62,7 +66,9 @@ async function saveItem<T extends { id: string }>(endpoint: string, item: T): Pr
   try {
     const current = await fetchItems<T>(endpoint).catch(() => []);
     const updated = [item, ...current.filter((i: any) => i.id !== item.id)];
-    localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(updated));
+    try {
+        localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(updated));
+    } catch(e) { console.warn("Quota exceeded in saveItem"); }
   } catch (e) {}
 
   try {
@@ -78,7 +84,9 @@ async function deleteItem(endpoint: string, id: string): Promise<void> {
   try {
     const current = await fetchItems<any>(endpoint).catch(() => []);
     const updated = current.filter((i: any) => i.id !== id);
-    localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(updated));
+    try {
+        localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(updated));
+    } catch(e) { console.warn("Quota exceeded in deleteItem"); }
   } catch (e) {}
 
   try {
@@ -108,7 +116,9 @@ export const getSetting = async <T>(key: string): Promise<T | null> => {
     const res = await fetch(`/api/settings?key=${key}&t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
         const val = await res.json();
-        localStorage.setItem(FALLBACK_PREFIX + 'setting_' + key, JSON.stringify(val));
+        try {
+            localStorage.setItem(FALLBACK_PREFIX + 'setting_' + key, JSON.stringify(val));
+        } catch(e) {}
         return val;
     }
     throw new Error();
@@ -119,7 +129,10 @@ export const getSetting = async <T>(key: string): Promise<T | null> => {
 };
 
 export const saveSetting = async (key: string, value: any): Promise<void> => {
-  localStorage.setItem(FALLBACK_PREFIX + 'setting_' + key, JSON.stringify(value));
+  try {
+      localStorage.setItem(FALLBACK_PREFIX + 'setting_' + key, JSON.stringify(value));
+  } catch(e) {}
+  
   try {
     await fetch('/api/settings', {
         method: 'POST',
