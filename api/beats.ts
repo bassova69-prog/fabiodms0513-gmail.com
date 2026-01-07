@@ -8,26 +8,46 @@ export default async function handler(
   request: VercelRequest,
   response: VercelResponse,
 ) {
+  // CORS Headers
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
+  if (request.method === 'OPTIONS') {
+    return response.status(200).end();
+  }
+
   const sql = neon(DB_URL);
 
-  response.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  response.setHeader('Pragma', 'no-cache');
-  response.setHeader('Expires', '0');
-
   try {
+    // 1. AUTO-CREATION DE LA TABLE SI ELLE N'EXISTE PAS (Sécurité)
+    await sql`CREATE TABLE IF NOT EXISTS beats (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      bpm NUMERIC,
+      cover_url TEXT,
+      mp3_url TEXT,
+      wav_url TEXT,
+      stems_url TEXT,
+      youtube_id TEXT,
+      tags TEXT[],
+      price_mp3 NUMERIC,
+      price_wav NUMERIC,
+      price_trackout NUMERIC,
+      price_exclusive NUMERIC,
+      data JSONB,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );`;
+
     if (request.method === 'GET') {
       const { limit } = request.query;
       let rows;
       
-      try {
-          if (limit && !isNaN(Number(limit))) {
-            rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
-          } else {
-            rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
-          }
-      } catch (sqlError: any) {
-          console.error("SQL Error:", sqlError);
-          return response.status(200).json([]);
+      if (limit && !isNaN(Number(limit))) {
+        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
+      } else {
+        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
       }
 
       // MAPPING SIMPLIFIÉ (Snake Case Direct)
@@ -35,11 +55,10 @@ export default async function handler(
         let d = row.data || {};
         if (typeof d === 'string') { try { d = JSON.parse(d); } catch(e) {} }
 
-        // Valeurs prioritaires (Colonne SQL > JSON)
         const getVal = (col: string, jsonKey: string, fallback: any) => {
              if (row[col] !== undefined && row[col] !== null && row[col] !== "") return row[col];
-             if (d[col] !== undefined && d[col] !== null && d[col] !== "") return d[col]; // check snake in json
-             if (d[jsonKey] !== undefined && d[jsonKey] !== null && d[jsonKey] !== "") return d[jsonKey]; // check camel in json (legacy)
+             if (d[col] !== undefined && d[col] !== null && d[col] !== "") return d[col]; 
+             if (d[jsonKey] !== undefined && d[jsonKey] !== null && d[jsonKey] !== "") return d[jsonKey];
              return fallback;
         };
 
@@ -67,7 +86,7 @@ export default async function handler(
             wav_url: getVal('wav_url', 'wavUrl', ""),
             stems_url: getVal('stems_url', 'stemsUrl', ""),
             youtube_id: getVal('youtube_id', 'youtubeId', ""),
-            audioUrl: mp3Url, // Alias pour le player
+            audioUrl: mp3Url, 
             date: row.created_at || new Date().toISOString(),
             licenses: [
                 {
@@ -111,8 +130,6 @@ export default async function handler(
       
       if (!beat.id) beat.id = `beat-${Date.now()}`;
       
-      // On accepte les deux formats en entrée (camel ou snake) pour la robustesse, 
-      // mais on sauvegarde en colonnes SQL snake_case
       const title = beat.title || "Sans titre";
       const bpm = Number(beat.bpm) || 0;
       const coverUrl = beat.cover_url || beat.coverUrl || "";
@@ -122,7 +139,6 @@ export default async function handler(
       const youtubeId = beat.youtube_id || beat.youtubeId || "";
       const tags = Array.isArray(beat.tags) ? beat.tags : [];
       
-      // Extraction Prix
       const getP = (keySnake: string, keyCamel: string, id: string, def: number) => {
           if (beat[keySnake]) return Number(beat[keySnake]);
           if (beat[keyCamel]) return Number(beat[keyCamel]);
@@ -135,7 +151,6 @@ export default async function handler(
       const pTrackout = getP('price_trackout', 'priceTrackout', 'trackout', 99.99);
       const pExclu = getP('price_exclusive', 'priceExclusive', 'exclusive', 499.99);
 
-      // JSON de backup
       const beatJson = JSON.stringify({
           ...beat,
           cover_url: coverUrl, mp3_url: mp3Url, wav_url: wavUrl, stems_url: stemsUrl, youtube_id: youtubeId,
@@ -179,7 +194,6 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('Database Error:', error);
-    if (request.method === 'GET') return response.status(200).json([]);
-    return response.status(500).json({ error: error.message });
+    return response.status(500).json({ error: error.message, details: "Erreur SQL NeonDB" });
   }
 }

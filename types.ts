@@ -32,7 +32,7 @@ export interface Beat {
   youtube_id?: string;
   
   // Données calculées / UI
-  audioUrl?: string; // Gardé pour compatibilité lecteur, souvent alias de mp3_url
+  audioUrl?: string; // Gardé pour compatibilité lecteur
   licenses: License[];
   description?: string;
   date?: string;
@@ -49,25 +49,13 @@ export interface Masterclass {
   thumbnailUrl: string;
 }
 
-export interface FinancialData {
-  month: string;
-  income: number;
-  expenses: number;
-  net: number;
-}
-
-export enum LegalStatus {
-  AUTO_ENTREPRENEUR = 'Auto-Entrepreneur',
-  EURL = 'EURL',
-  SASU = 'SASU'
-}
-
 export interface CartItem {
   id: string;
   beat: Beat;
   license: License;
 }
 
+// Utilisé pour l'enregistrement des ventes dans Success.tsx
 export interface Transaction {
   id: string;
   date: string;
@@ -77,23 +65,4 @@ export interface Transaction {
   amount: number;
   type: 'IN' | 'OUT';
   status: 'PAYÉ' | 'EN_ATTENTE';
-}
-
-export interface ContractArchive {
-  id: string;
-  title: string;
-  date: string;
-  content: string;
-  analysis: string;
-}
-
-export interface ScheduleEvent {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  type: 'STUDIO' | 'DEADLINE' | 'ADMIN';
-  status: 'PENDING' | 'DONE';
-  artist?: string;
-  notes?: string;
 }

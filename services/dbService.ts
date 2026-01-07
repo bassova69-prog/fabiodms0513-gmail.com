@@ -1,5 +1,5 @@
 
-import { Beat, Transaction, ContractArchive, ScheduleEvent } from '../types';
+import { Beat, Transaction } from '../types';
 
 export const initDB = async (): Promise<void> => Promise.resolve();
 
@@ -12,29 +12,38 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
         headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
     });
     
-    if (!res.ok) throw new Error(`API Error ${res.status}`);
+    if (!res.ok) {
+        if (res.status === 404) {
+            throw new Error("API_NOT_FOUND");
+        }
+        const errText = await res.text();
+        console.error(`[DB] Erreur API ${endpoint} (${res.status}):`, errText);
+        throw new Error(`API Error ${res.status}: ${errText}`);
+    }
+    
     const data = await res.json();
     
     if (Array.isArray(data)) {
         localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(data));
     }
     return data;
-  } catch (e) {
-    console.warn(`[DB] Mode Hors Ligne pour ${endpoint}`);
+  } catch (e: any) {
+    if (e.message === "API_NOT_FOUND") {
+        console.warn(`[DB] API ${endpoint} non disponible (404). Utilisation du cache local.`);
+    } else {
+        console.warn(`[DB] Passage en mode local pour ${endpoint} suite à :`, e.message);
+    }
+    
     const local = localStorage.getItem(FALLBACK_PREFIX + endpoint);
     if (!local) return [];
 
     try {
         const parsed = JSON.parse(local);
-        
-        // --- MISE A JOUR SNAKE_CASE ---
-        // On vérifie maintenant que les beats ont bien 'cover_url' (nouveau standard)
-        // Si on trouve du 'coverUrl' (ancien standard), on purge le cache
+        // Cache purge logic for beats
         if (endpoint === 'beats' && Array.isArray(parsed) && parsed.length > 0) {
             const sample = parsed[0];
-            // Si on a coverUrl (camel) mais pas cover_url (snake), c'est un vieux cache => PURGE
             if ('coverUrl' in sample && !('cover_url' in sample)) {
-                console.warn("[DB] Cache obsolète (camelCase détecté). Purge.");
+                console.warn("[DB] Cache obsolète purgé.");
                 localStorage.removeItem(FALLBACK_PREFIX + endpoint);
                 return [];
             }
@@ -80,9 +89,10 @@ export const checkConnection = async (): Promise<{ success: boolean; message: st
     if (res.ok) {
       return { success: true, message: "Base de Données Connectée", mode: 'CLOUD' };
     }
+    if (res.status === 404) throw new Error("API non déployée");
     throw new Error(`API Status ${res.status}`);
   } catch (e: any) {
-    return { success: true, message: "Mode Hors Ligne", mode: 'LOCAL' };
+    return { success: true, message: `Mode Hors Ligne`, mode: 'LOCAL' };
   }
 };
 
@@ -93,14 +103,6 @@ export const deleteBeat = (id: string) => deleteItem('beats', id);
 export const saveTransaction = (tx: Transaction) => saveItem('transactions', tx);
 export const getAllTransactions = () => fetchItems<Transaction>('transactions');
 export const deleteTransaction = (id: string) => deleteItem('transactions', id);
-
-export const saveContract = (c: ContractArchive) => saveItem('contracts', c);
-export const getAllContracts = () => fetchItems<ContractArchive>('contracts');
-export const deleteContract = (id: string) => deleteItem('contracts', id);
-
-export const saveEvent = (ev: ScheduleEvent) => saveItem('events', ev);
-export const getAllEvents = () => fetchItems<ScheduleEvent>('events');
-export const deleteEvent = (id: string) => deleteItem('events', id);
 
 export const getSetting = async <T>(key: string): Promise<T | null> => {
   try {
