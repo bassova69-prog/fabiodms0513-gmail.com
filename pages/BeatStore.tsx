@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BeatCard } from '../components/BeatCard';
@@ -24,6 +25,7 @@ export const BeatStore: React.FC = () => {
     setIsLoading(true);
     setErrorMsg(null);
     try {
+      // getAllBeats utilise maintenant un cache mémoire intelligent pour économiser la bande passante Neon
       const savedCustomBeats = await getAllBeats();
       
       if (Array.isArray(savedCustomBeats)) {
@@ -52,6 +54,7 @@ export const BeatStore: React.FC = () => {
   };
   
   const handleForceRefresh = () => {
+      // Vide le localStorage mais la prochaine requête remplira le cache mémoire
       localStorage.removeItem('fabio_data_beats'); 
       loadBeats();
   };
@@ -89,17 +92,7 @@ export const BeatStore: React.FC = () => {
   useEffect(() => {
     loadBeats();
     checkPromo();
-    const intervalId = setInterval(() => {
-        if (!searchParams.get('promo')) checkPromo();
-    }, 5000);
-    const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') { checkPromo(); loadBeats(); }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-        clearInterval(intervalId);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    // Suppression des intervalles et des rechargements automatiques pour économiser la bande passante Neon
   }, [checkPromo, searchParams]);
 
   useEffect(() => {
