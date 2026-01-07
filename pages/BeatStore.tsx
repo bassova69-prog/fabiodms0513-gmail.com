@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BeatCard } from '../components/BeatCard';
-import { Filter, ShoppingBag, Music, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { ShoppingBag, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw, AlertTriangle, WifiOff } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Beat, StorePromotion, License } from '../types';
 import { getAllBeats, getSetting } from '../services/dbService';
@@ -10,7 +9,6 @@ import { usePlayer } from '../contexts/PlayerContext';
 
 export const BeatStore: React.FC = () => {
   const { cartCount, toggleCart, addToCart } = useCart();
-  const { playBeat } = usePlayer();
   const [searchParams] = useSearchParams();
 
   const [beats, setBeats] = useState<Beat[]>([]);
@@ -29,6 +27,9 @@ export const BeatStore: React.FC = () => {
       const savedCustomBeats = await getAllBeats();
       
       if (Array.isArray(savedCustomBeats)) {
+        if (savedCustomBeats.length === 0) {
+           setErrorMsg("Le catalogue est vide.");
+        }
         const validBeats = savedCustomBeats.filter(b => b && typeof b === 'object' && b.id);
         setBeats(validBeats);
         setFilteredBeats(prev => {
@@ -38,13 +39,13 @@ export const BeatStore: React.FC = () => {
       } else {
         setBeats([]);
         setFilteredBeats([]);
-        setErrorMsg("Impossible de récupérer le catalogue (Erreur API).");
+        setErrorMsg("Format de données invalide reçu de l'API.");
       }
     } catch (e: any) {
       console.error("Error loading beats:", e);
       setBeats([]);
       setFilteredBeats([]);
-      setErrorMsg("Erreur de connexion : " + e.message);
+      setErrorMsg(e.message || "Erreur de connexion.");
     } finally {
       setIsLoading(false);
     }
@@ -236,14 +237,18 @@ export const BeatStore: React.FC = () => {
                     </>
                 ) : (
                     <>
-                        <AlertTriangle className="w-16 h-16 mb-4 text-[#3d2b1f]" />
+                        {errorMsg?.includes("connexion") ? (
+                            <WifiOff className="w-16 h-16 mb-4 text-red-500/50" />
+                        ) : (
+                            <AlertTriangle className="w-16 h-16 mb-4 text-[#3d2b1f]" />
+                        )}
                         <p className="font-bold text-xl text-[#8c7a6b] mb-2">
-                           {errorMsg ? "Erreur de chargement" : "Aucun beat trouvé"}
+                           {errorMsg || "Aucun beat trouvé"}
                         </p>
-                        {errorMsg && <p className="text-red-400 text-sm mb-4">{errorMsg}</p>}
+                        {errorMsg && <p className="text-red-400 text-sm mb-4 max-w-md mx-auto">{errorMsg}</p>}
                         
                         <button onClick={handleForceRefresh} className="bg-amber-500 text-black font-black px-6 py-3 rounded-xl hover:bg-white transition-all uppercase text-xs tracking-widest mt-4">
-                            Forcer la mise à jour
+                            Réessayer
                         </button>
                     </>
                 )}
