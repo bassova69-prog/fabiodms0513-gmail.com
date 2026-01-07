@@ -9,32 +9,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
 
   try {
-    // 1. Check if table exists
+    // 1. Lister toutes les tables publiques pour vérifier où on est connecté
+    const allTables = await sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+    `;
+
+    // 2. Vérifier spécifiquement la table 'beats'
     const tableCheck = await sql`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' AND table_name = 'beats';
     `;
 
-    // 2. Fetch raw rows
+    // 3. Essayer de lire des données si la table existe
     let rows: any[] = [];
-    let message = "Table 'beats' exists.";
+    let countResult: any[] = [];
+    let message = "";
     
     if (tableCheck.length === 0) {
-        message = "CRITICAL: Table 'beats' does NOT exist.";
+        message = "CRITICAL: La table 'beats' n'existe pas dans cette base de données.";
     } else {
         rows = await sql`SELECT * FROM beats LIMIT 5`;
+        countResult = await sql`SELECT COUNT(*) FROM beats`;
+        message = "Table 'beats' trouvée.";
     }
 
     return res.json({
       status: "Debug Report",
-      tableExists: tableCheck.length > 0,
-      message,
-      rowCount: rows.length,
-      sampleData: rows
+      database_url_masked: DB_URL.replace(/:[^:]*@/, ':***@'), // Masquer le mot de passe pour la sécurité
+      tables_in_database: allTables.map(t => t.table_name),
+      beats_table_exists: tableCheck.length > 0,
+      beats_row_count: countResult.length > 0 ? countResult[0].count : "N/A",
+      sample_data: rows,
+      message
     });
 
   } catch (e: any) {
-    return res.status(500).json({ error: e.message, stack: e.stack });
+    return res.status(500).json({ 
+        error: "Connection Failed", 
+        message: e.message, 
+        code: e.code 
+    });
   }
 }

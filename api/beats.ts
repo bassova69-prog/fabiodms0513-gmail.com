@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
@@ -22,17 +23,14 @@ export default async function handler(
     if (request.method === 'GET') {
       const { limit } = request.query;
       
+      // MODIFICATION ICI : On exécute la requête directement. 
+      // Si elle échoue (table introuvable, auth incorrecte), l'erreur sera attrapée par le catch global 
+      // et renvoyée au frontend avec un code 500, au lieu de renvoyer [] silencieusement.
       let rows;
-      try {
-          if (limit) {
-            rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
-          } else {
-            rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
-          }
-      } catch (dbError: any) {
-          console.error("SQL Error:", dbError);
-          // Fallback: si la table n'existe pas ou erreur colonne, on renvoie tableau vide pour ne pas crash le front
-          return response.status(200).json([]);
+      if (limit) {
+        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
+      } else {
+        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
       }
 
       const beats = rows.map((row) => {
@@ -42,38 +40,30 @@ export default async function handler(
 
         const find = (keys: string[], fallback: any = "") => {
              for (const k of keys) {
-                 // Check row properties
                  if (row[k] !== undefined && row[k] !== null && row[k] !== "") return row[k];
-                 // Check JSON data properties
                  if (d[k] !== undefined && d[k] !== null && d[k] !== "") return d[k];
              }
              return fallback;
         };
 
-        // Mapping Schema Utilisateur
         const id = String(row.id);
         const title = find(['title', 'name'], "Sans titre");
         const bpm = Number(find(['bpm'], 0));
         const coverUrl = find(['cover_url', 'coverUrl', 'image'], "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04");
         
-        // URLs Audio
         const mp3Url = find(['mp3_url', 'audio_url', 'mp3Url', 'audioUrl']);
         const wavUrl = find(['wav_url', 'wavUrl']);
         const stemsUrl = find(['stems_url', 'stemsUrl']);
         const youtubeId = find(['youtube_id', 'youtubeId']);
 
-        // Gestion Tags (Postgres TEXT[] ou string "{a,b}")
         let tags: string[] = [];
         const rawTags = row.tags || d.tags;
         if (Array.isArray(rawTags)) {
             tags = rawTags;
         } else if (typeof rawTags === 'string') {
-            // Nettoyage format postgres {tag1,tag2}
             tags = rawTags.replace(/^\{|\}$/g, '').split(',').map(t => t.trim().replace(/"/g, '')).filter(Boolean);
         }
 
-        // Prix (Fallback intelligent)
-        // Note: Neon retourne parfois des strings pour les types NUMERIC
         const pMp3 = Number(find(['price_mp3', 'priceMp3', 'price_lease'], 29.99));
         const pWav = Number(find(['price_wav', 'priceWav'], 49.99));
         const pTrack = Number(find(['price_trackout', 'priceTrackout'], 99.99));
@@ -103,11 +93,11 @@ export default async function handler(
       return response.status(200).json(beats);
     }
     
-    // POST et DELETE conservés pour compatibilité future (admin)
     return response.status(405).json({ error: "Method Not Allowed" });
 
   } catch (error: any) {
     console.error('API Error:', error);
-    return response.status(500).json({ error: error.message });
+    // On renvoie l'erreur exacte SQL pour le débogage
+    return response.status(500).json({ error: error.message, code: error.code, detail: "Erreur lors de la requête SQL NeonDB" });
   }
 }
