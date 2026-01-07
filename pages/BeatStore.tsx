@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BeatCard } from '../components/BeatCard';
-import { ShoppingBag, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw, AlertTriangle, WifiOff } from 'lucide-react';
+import { ShoppingBag, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw, AlertTriangle, WifiOff, Database } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Beat, StorePromotion, License } from '../types';
 import { getAllBeats, getSetting } from '../services/dbService';
@@ -247,7 +247,13 @@ export const BeatStore: React.FC = () => {
                         </p>
                         {errorMsg && <p className="text-red-400 text-sm mb-4 max-w-md mx-auto">{errorMsg}</p>}
                         
-                        <button onClick={handleForceRefresh} className="bg-amber-500 text-black font-black px-6 py-3 rounded-xl hover:bg-white transition-all uppercase text-xs tracking-widest mt-4">
+                        {(errorMsg === "Le catalogue est vide." || errorMsg?.includes("connexion")) && (
+                           <a href="/api/debug" target="_blank" className="flex items-center gap-2 text-[10px] text-amber-500 uppercase tracking-widest mt-2 hover:text-white transition-colors">
+                              <Database className="w-3 h-3" /> Vérifier l'état de la base de données
+                           </a>
+                        )}
+
+                        <button onClick={handleForceRefresh} className="bg-amber-500 text-black font-black px-6 py-3 rounded-xl hover:bg-white transition-all uppercase text-xs tracking-widest mt-6">
                             Réessayer
                         </button>
                     </>

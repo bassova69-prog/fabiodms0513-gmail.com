@@ -23,14 +23,24 @@ export default async function handler(
     if (request.method === 'GET') {
       const { limit } = request.query;
       
-      // MODIFICATION ICI : On exécute la requête directement. 
-      // Si elle échoue (table introuvable, auth incorrecte), l'erreur sera attrapée par le catch global 
-      // et renvoyée au frontend avec un code 500, au lieu de renvoyer [] silencieusement.
       let rows;
-      if (limit) {
-        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
-      } else {
-        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
+      // Limite par défaut à 100 pour éviter de charger toute la base si limit n'est pas spécifié
+      const queryLimit = limit ? Number(limit) : 100;
+
+      try {
+        // OPTIMISATION : Sélection des colonnes spécifiques pour réduire le transfert de données (Data Transfer)
+        rows = await sql`
+            SELECT 
+                id, title, bpm, cover_url, mp3_url, wav_url, stems_url, youtube_id, tags, 
+                price_mp3, price_wav, price_trackout, price_exclusive, created_at, data
+            FROM beats 
+            ORDER BY created_at DESC 
+            LIMIT ${queryLimit}
+        `;
+      } catch (queryError) {
+        console.warn("Optimized query failed, fallback to SELECT *", queryError);
+        // Fallback de sécurité : si les colonnes spécifiques n'existent pas, on tente le SELECT *
+        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${queryLimit}`;
       }
 
       const beats = rows.map((row) => {
@@ -97,7 +107,6 @@ export default async function handler(
 
   } catch (error: any) {
     console.error('API Error:', error);
-    // On renvoie l'erreur exacte SQL pour le débogage
     return response.status(500).json({ error: error.message, code: error.code, detail: "Erreur lors de la requête SQL NeonDB" });
   }
 }

@@ -9,39 +9,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
 
   try {
-    // 1. Lister toutes les tables publiques pour vérifier où on est connecté
+    // 1. Lister toutes les tables
     const allTables = await sql`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public'
     `;
 
-    // 2. Vérifier spécifiquement la table 'beats'
-    const tableCheck = await sql`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'beats';
+    // 2. Vérifier la table 'beats' et ses colonnes
+    const columnsCheck = await sql`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'beats';
     `;
 
-    // 3. Essayer de lire des données si la table existe
+    // 3. Essayer de lire des données
     let rows: any[] = [];
     let countResult: any[] = [];
     let message = "";
     
-    if (tableCheck.length === 0) {
-        message = "CRITICAL: La table 'beats' n'existe pas dans cette base de données.";
+    if (columnsCheck.length === 0) {
+        message = "CRITICAL: La table 'beats' n'existe pas.";
     } else {
-        rows = await sql`SELECT * FROM beats LIMIT 5`;
+        rows = await sql`SELECT * FROM beats LIMIT 3`;
         countResult = await sql`SELECT COUNT(*) FROM beats`;
         message = "Table 'beats' trouvée.";
     }
 
     return res.json({
       status: "Debug Report",
-      database_url_masked: DB_URL.replace(/:[^:]*@/, ':***@'), // Masquer le mot de passe pour la sécurité
-      tables_in_database: allTables.map(t => t.table_name),
-      beats_table_exists: tableCheck.length > 0,
-      beats_row_count: countResult.length > 0 ? countResult[0].count : "N/A",
+      database_url_masked: DB_URL.replace(/:[^:]*@/, ':***@'),
+      tables: allTables.map(t => t.table_name),
+      beats_columns: columnsCheck.map(c => `${c.column_name} (${c.data_type})`),
+      beats_count: countResult.length > 0 ? countResult[0].count : 0,
       sample_data: rows,
       message
     });
