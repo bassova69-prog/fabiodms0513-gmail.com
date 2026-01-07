@@ -17,8 +17,15 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
             throw new Error("API_NOT_FOUND");
         }
         const errText = await res.text();
-        console.error(`[DB] Erreur API ${endpoint} (${res.status}):`, errText);
-        throw new Error(`API Error ${res.status}: ${errText}`);
+        // On essaie de parser le JSON d'erreur si possible
+        let errMsg = errText;
+        try {
+            const jsonErr = JSON.parse(errText);
+            errMsg = jsonErr.detail || jsonErr.error || errText;
+        } catch(e) {}
+
+        console.error(`[DB] Erreur API ${endpoint} (${res.status}):`, errMsg);
+        throw new Error(`${errMsg} (${res.status})`);
     }
     
     const data = await res.json();
@@ -29,13 +36,18 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
     return data;
   } catch (e: any) {
     if (e.message === "API_NOT_FOUND") {
-        console.warn(`[DB] API ${endpoint} non disponible (404). Utilisation du cache local.`);
+        console.warn(`[DB] API ${endpoint} non disponible (404).`);
     } else {
-        console.warn(`[DB] Passage en mode local pour ${endpoint} suite à :`, e.message);
+        console.warn(`[DB] Erreur fetch pour ${endpoint}:`, e.message);
     }
     
     const local = localStorage.getItem(FALLBACK_PREFIX + endpoint);
-    if (!local) return [];
+    
+    // CHANGEMENT MAJEUR : Si pas de cache local, on renvoie l'erreur pour l'afficher sur le site
+    // Au lieu de retourner [] silencieusement
+    if (!local) {
+        throw e;
+    }
 
     try {
         const parsed = JSON.parse(local);
@@ -48,7 +60,7 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
 
 async function saveItem<T extends { id: string }>(endpoint: string, item: T): Promise<void> {
   try {
-    const current = await fetchItems<T>(endpoint);
+    const current = await fetchItems<T>(endpoint).catch(() => []);
     const updated = [item, ...current.filter((i: any) => i.id !== item.id)];
     localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(updated));
   } catch (e) {}
@@ -64,7 +76,7 @@ async function saveItem<T extends { id: string }>(endpoint: string, item: T): Pr
 
 async function deleteItem(endpoint: string, id: string): Promise<void> {
   try {
-    const current = await fetchItems<any>(endpoint);
+    const current = await fetchItems<any>(endpoint).catch(() => []);
     const updated = current.filter((i: any) => i.id !== id);
     localStorage.setItem(FALLBACK_PREFIX + endpoint, JSON.stringify(updated));
   } catch (e) {}
