@@ -47,7 +47,7 @@ export const Home: React.FC = () => {
       
       <section className="relative h-[450px] md:h-[500px] rounded-[2rem] overflow-hidden group shadow-2xl border border-[#2a2a2a]">
         <img 
-          src={featuredBeat?.cover_url || "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop"} 
+          src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop" 
           alt="Studio Banner" 
           className="absolute inset-0 w-full h-full object-cover opacity-60 saturate-[1.1] transition-transform duration-1000 group-hover:scale-105"
         />
