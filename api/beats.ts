@@ -21,73 +21,70 @@ export default async function handler(
   const sql = neon(DB_URL);
 
   try {
-    // 1. AUTO-CREATION DE LA TABLE SI ELLE N'EXISTE PAS (Sécurité)
-    await sql`CREATE TABLE IF NOT EXISTS beats (
-      id TEXT PRIMARY KEY,
-      title TEXT,
-      bpm NUMERIC,
-      cover_url TEXT,
-      mp3_url TEXT,
-      wav_url TEXT,
-      stems_url TEXT,
-      youtube_id TEXT,
-      tags TEXT[],
-      price_mp3 NUMERIC,
-      price_wav NUMERIC,
-      price_trackout NUMERIC,
-      price_exclusive NUMERIC,
-      data JSONB,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );`;
-
     if (request.method === 'GET') {
       const { limit } = request.query;
       let rows;
       
+      // Sélectionne toutes les colonnes disponibles
       if (limit && !isNaN(Number(limit))) {
         rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${Number(limit)}`;
       } else {
         rows = await sql`SELECT * FROM beats ORDER BY created_at DESC`;
       }
 
-      // MAPPING SIMPLIFIÉ (Snake Case Direct)
       const beats = rows.map((row) => {
+        // Tente de parser le champ JSON 'data' s'il existe (pour rétrocompatibilité)
         let d = row.data || {};
         if (typeof d === 'string') { try { d = JSON.parse(d); } catch(e) {} }
 
-        const getVal = (col: string, jsonKey: string, fallback: any) => {
-             if (row[col] !== undefined && row[col] !== null && row[col] !== "") return row[col];
-             if (d[col] !== undefined && d[col] !== null && d[col] !== "") return d[col]; 
-             if (d[jsonKey] !== undefined && d[jsonKey] !== null && d[jsonKey] !== "") return d[jsonKey];
+        // Fonction utilitaire pour chercher une valeur dans plusieurs colonnes possibles
+        // Ordre de priorité : Colonne DB > Champ JSON > Fallback
+        const find = (keys: string[], fallback: any = "") => {
+             for (const k of keys) {
+                 if (row[k] !== undefined && row[k] !== null && row[k] !== "") return row[k];
+                 if (d[k] !== undefined && d[k] !== null && d[k] !== "") return d[k];
+             }
              return fallback;
         };
 
-        const priceMp3 = Number(getVal('price_mp3', 'priceMp3', 29.99));
-        const priceWav = Number(getVal('price_wav', 'priceWav', 49.99));
-        const priceTrackout = Number(getVal('price_trackout', 'priceTrackout', 99.99));
-        const priceExclusive = Number(getVal('price_exclusive', 'priceExclusive', 499.99));
+        // Mapping strict basé sur le schéma fourni par l'utilisateur
+        const title = find(['title', 'name'], "Sans titre");
+        const bpm = Number(find(['bpm'], 0));
+        const coverUrl = find(['cover_url', 'coverUrl', 'image'], "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04");
+        
+        // Gestion audio : vérifie mp3_url ET audio_url
+        const mp3Url = find(['mp3_url', 'audio_url', 'mp3Url', 'audioUrl']);
+        const wavUrl = find(['wav_url', 'wavUrl']);
+        const stemsUrl = find(['stems_url', 'stemsUrl']);
+        const youtubeId = find(['youtube_id', 'youtubeId']);
 
-        let tags = [];
+        // Gestion des tags (TEXT[] ou string)
+        let tags: string[] = [];
         const rawTags = row.tags || d.tags;
-        if (Array.isArray(rawTags)) tags = rawTags;
-        else if (typeof rawTags === 'string') {
+        if (Array.isArray(rawTags)) {
+            tags = rawTags;
+        } else if (typeof rawTags === 'string') {
             tags = rawTags.replace(/^{|}$/g, '').split(',').map((t: string) => t.trim()).filter(Boolean);
         }
 
-        const mp3Url = getVal('mp3_url', 'mp3Url', "");
+        // Prix : Fallback sur price_lease si price_mp3 est manquant
+        const priceMp3 = Number(find(['price_mp3', 'priceMp3', 'price_lease'], 29.99));
+        const priceWav = Number(find(['price_wav', 'priceWav'], 49.99));
+        const priceTrackout = Number(find(['price_trackout', 'priceTrackout'], 99.99));
+        const priceExclusive = Number(find(['price_exclusive', 'priceExclusive'], 499.99));
 
         return {
-            id: row.id.toString(),
-            title: getVal('title', 'title', "Sans titre"),
-            bpm: Number(getVal('bpm', 'bpm', 0)),
-            tags: tags,
-            cover_url: getVal('cover_url', 'coverUrl', "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04"),
+            id: String(row.id),
+            title,
+            bpm,
+            tags,
+            cover_url: coverUrl,
             mp3_url: mp3Url,
-            wav_url: getVal('wav_url', 'wavUrl', ""),
-            stems_url: getVal('stems_url', 'stemsUrl', ""),
-            youtube_id: getVal('youtube_id', 'youtubeId', ""),
-            audioUrl: mp3Url, 
-            date: row.created_at || new Date().toISOString(),
+            wav_url: wavUrl,
+            stems_url: stemsUrl,
+            youtube_id: youtubeId,
+            audioUrl: mp3Url, // Alias pour le player React
+            date: find(['created_at', 'date'], new Date().toISOString()),
             licenses: [
                 {
                   id: 'mp3',
@@ -130,32 +127,11 @@ export default async function handler(
       
       if (!beat.id) beat.id = `beat-${Date.now()}`;
       
-      const title = beat.title || "Sans titre";
-      const bpm = Number(beat.bpm) || 0;
-      const coverUrl = beat.cover_url || beat.coverUrl || "";
-      const mp3Url = beat.mp3_url || beat.mp3Url || "";
-      const wavUrl = beat.wav_url || beat.wavUrl || "";
-      const stemsUrl = beat.stems_url || beat.stemsUrl || "";
-      const youtubeId = beat.youtube_id || beat.youtubeId || "";
-      const tags = Array.isArray(beat.tags) ? beat.tags : [];
+      // ... logique d'insertion standard, compatible avec le schéma ...
+      // Pour éviter de casser l'existant, on insert dans les colonnes standard
+      // Si l'utilisateur a des colonnes custom non gérées ici, elles seront ignorées (sauf si dans JSONB data)
       
-      const getP = (keySnake: string, keyCamel: string, id: string, def: number) => {
-          if (beat[keySnake]) return Number(beat[keySnake]);
-          if (beat[keyCamel]) return Number(beat[keyCamel]);
-          const l = beat.licenses?.find((lic: any) => lic.id === id);
-          return l ? Number(l.price) : def;
-      };
-
-      const pMp3 = getP('price_mp3', 'priceMp3', 'mp3', 29.99);
-      const pWav = getP('price_wav', 'priceWav', 'wav', 49.99);
-      const pTrackout = getP('price_trackout', 'priceTrackout', 'trackout', 99.99);
-      const pExclu = getP('price_exclusive', 'priceExclusive', 'exclusive', 499.99);
-
-      const beatJson = JSON.stringify({
-          ...beat,
-          cover_url: coverUrl, mp3_url: mp3Url, wav_url: wavUrl, stems_url: stemsUrl, youtube_id: youtubeId,
-          price_mp3: pMp3, price_wav: pWav, price_trackout: pTrackout, price_exclusive: pExclu
-      });
+      const beatJson = JSON.stringify(beat);
 
       await sql`
         INSERT INTO beats (
@@ -163,8 +139,12 @@ export default async function handler(
             price_mp3, price_wav, price_trackout, price_exclusive, 
             data, created_at
         ) VALUES (
-            ${beat.id}, ${title}, ${bpm}, ${coverUrl}, ${mp3Url}, ${wavUrl}, ${stemsUrl}, ${youtubeId}, ${tags},
-            ${pMp3}, ${pWav}, ${pTrackout}, ${pExclu},
+            ${beat.id}, ${beat.title || "Sans Titre"}, ${Number(beat.bpm) || 0}, 
+            ${beat.cover_url || beat.coverUrl}, ${beat.mp3_url || beat.mp3Url}, 
+            ${beat.wav_url || beat.wavUrl}, ${beat.stems_url || beat.stemsUrl}, 
+            ${beat.youtube_id || beat.youtubeId}, ${beat.tags || []},
+            ${beat.price_mp3 || 29.99}, ${beat.price_wav || 49.99}, 
+            ${beat.price_trackout || 99.99}, ${beat.price_exclusive || 499.99},
             ${beatJson}::jsonb, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET

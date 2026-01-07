@@ -1,10 +1,8 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Download, CheckCircle2, Music, ShoppingBag, ArrowRight, Loader2, Info, FileAudio, Landmark, FolderArchive } from 'lucide-react';
+import { Download, CheckCircle2, ShoppingBag, ArrowRight, Loader2, Info, FileAudio, FolderArchive } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
-import { Transaction } from '../types';
-import { saveTransaction } from '../services/dbService';
 
 export const Success: React.FC = () => {
   const navigate = useNavigate();
@@ -12,51 +10,14 @@ export const Success: React.FC = () => {
   const { setIsCartOpen } = useCart();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [showDownloadTip, setShowDownloadTip] = useState(false);
-  const processedRef = useRef(false);
   
   const purchasedItems = location.state?.items || [];
-
-  useEffect(() => {
-    if (purchasedItems.length > 0 && !processedRef.current) {
-      const ACCOUNTING_STORAGE_KEY = 'fabio_pro_accounting_v1';
-      
-      try {
-        const savedTransactions = JSON.parse(localStorage.getItem(ACCOUNTING_STORAGE_KEY) || '[]');
-        
-        const newTransactions: Transaction[] = purchasedItems.map((item: any) => ({
-          id: `sale-${item.id}`, 
-          date: new Date().toISOString(), 
-          label: `Vente: ${item.beat.title} (${item.license.name})`,
-          customer: "Client Boutique Web",
-          category: 'VENTE',
-          amount: item.license.price,
-          type: 'IN',
-          status: 'PAYÉ'
-        }));
-
-        const existingIds = new Set(savedTransactions.map((t: any) => t.id));
-        const filteredNew = newTransactions.filter(nt => !existingIds.has(nt.id));
-
-        if (filteredNew.length > 0) {
-          const updatedTransactions = [...filteredNew, ...savedTransactions];
-          localStorage.setItem(ACCOUNTING_STORAGE_KEY, JSON.stringify(updatedTransactions));
-          filteredNew.forEach(t => {
-            saveTransaction(t).catch(err => console.warn("DB Save failed for transaction", t.id, err));
-          });
-        }
-        
-        processedRef.current = true;
-      } catch (e) {
-        console.error("Erreur lors de l'enregistrement comptable automatique:", e);
-      }
-    }
-  }, [purchasedItems]);
 
   const handleDownload = (item: any) => {
     const { beat, license, id } = item;
     
-    // Logique mise à jour avec snake_case
-    let fileUrl = beat.mp3_url; // Par défaut
+    // Logique de sélection de fichier
+    let fileUrl = beat.mp3_url || beat.audioUrl; 
     let extension = 'mp3';
 
     if (license.fileType === 'WAV' && beat.wav_url) {
@@ -65,9 +26,6 @@ export const Success: React.FC = () => {
     } else if (license.fileType === 'TRACKOUT' && beat.stems_url) {
       fileUrl = beat.stems_url;
       extension = 'zip';
-    } else if (beat.mp3_url) {
-      fileUrl = beat.mp3_url;
-      extension = 'mp3';
     }
 
     if (!fileUrl) return;
@@ -114,7 +72,7 @@ export const Success: React.FC = () => {
             COMMANDE <span className="text-amber-500 text-stroke">PRÊTE</span>
           </h1>
           <p className="text-[#a89080] text-lg mb-8 max-w-lg font-medium">
-            Tes fichiers sont prêts au téléchargement. La vente a été inscrite automatiquement dans ton journal de caisse Fabio.
+            Tes fichiers sont prêts au téléchargement. Merci de ta confiance !
           </p>
 
           {showDownloadTip && (

@@ -1,5 +1,5 @@
 
-import { Beat, Transaction } from '../types';
+import { Beat } from '../types';
 
 export const initDB = async (): Promise<void> => Promise.resolve();
 
@@ -39,15 +39,6 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
 
     try {
         const parsed = JSON.parse(local);
-        // Cache purge logic for beats
-        if (endpoint === 'beats' && Array.isArray(parsed) && parsed.length > 0) {
-            const sample = parsed[0];
-            if ('coverUrl' in sample && !('cover_url' in sample)) {
-                console.warn("[DB] Cache obsolète purgé.");
-                localStorage.removeItem(FALLBACK_PREFIX + endpoint);
-                return [];
-            }
-        }
         return parsed;
     } catch (err) {
         return [];
@@ -99,10 +90,6 @@ export const checkConnection = async (): Promise<{ success: boolean; message: st
 export const saveBeat = (beat: Beat) => saveItem('beats', beat);
 export const getAllBeats = () => fetchItems<Beat>('beats');
 export const deleteBeat = (id: string) => deleteItem('beats', id);
-
-export const saveTransaction = (tx: Transaction) => saveItem('transactions', tx);
-export const getAllTransactions = () => fetchItems<Transaction>('transactions');
-export const deleteTransaction = (id: string) => deleteItem('transactions', id);
 
 export const getSetting = async <T>(key: string): Promise<T | null> => {
   try {
