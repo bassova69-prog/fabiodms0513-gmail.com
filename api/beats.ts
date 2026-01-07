@@ -24,11 +24,10 @@ export default async function handler(
       const { limit } = request.query;
       
       let rows;
-      // Limite par défaut à 100 pour éviter de charger toute la base si limit n'est pas spécifié
       const queryLimit = limit ? Number(limit) : 100;
 
       try {
-        // OPTIMISATION : Sélection des colonnes spécifiques pour réduire le transfert de données (Data Transfer)
+        // TENTATIVE 1 : Requête optimisée (colonnes spécifiques + tri)
         rows = await sql`
             SELECT 
                 id, title, bpm, cover_url, mp3_url, wav_url, stems_url, youtube_id, tags, 
@@ -38,9 +37,16 @@ export default async function handler(
             LIMIT ${queryLimit}
         `;
       } catch (queryError) {
-        console.warn("Optimized query failed, fallback to SELECT *", queryError);
-        // Fallback de sécurité : si les colonnes spécifiques n'existent pas, on tente le SELECT *
-        rows = await sql`SELECT * FROM beats ORDER BY created_at DESC LIMIT ${queryLimit}`;
+        console.warn("Optimized query failed, trying raw SELECT *", queryError);
+        
+        // TENTATIVE 2 (SECOURS) : On prend TOUT, sans tri, sans limite complexe.
+        // Si ça échoue ici, c'est que la table n'existe pas ou la connexion est mauvaise.
+        try {
+            rows = await sql`SELECT * FROM beats`;
+        } catch (fatalError) {
+            console.error("Fatal DB Error:", fatalError);
+            throw fatalError;
+        }
       }
 
       const beats = rows.map((row) => {

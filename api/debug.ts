@@ -9,41 +9,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'no-store');
 
   try {
-    // 1. Lister toutes les tables
-    const allTables = await sql`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public'
-    `;
+    // 1. Infos de connexion (Endpoint)
+    // Utile pour vérifier si on est sur le bon projet Neon
+    const endpointID = DB_URL.match(/@([^.]+)/)?.[1] || "inconnu";
 
-    // 2. Vérifier la table 'beats' et ses colonnes
+    // 2. Vérifier la table 'beats' et ses colonnes EXACTES
     const columnsCheck = await sql`
-        SELECT column_name, data_type 
+        SELECT column_name, data_type, is_nullable
         FROM information_schema.columns 
         WHERE table_name = 'beats';
     `;
 
-    // 3. Essayer de lire des données
-    let rows: any[] = [];
+    // 3. Chercher SPÉCIFIQUEMENT l'ID mentionné
+    // On utilise une recherche large (texte) pour voir si on le trouve
+    let specificBeat = [];
+    try {
+        specificBeat = await sql`SELECT * FROM beats WHERE id::text LIKE '%beat-1767791982327%' LIMIT 1`;
+    } catch(e) {
+        console.error("Search failed", e);
+    }
+
+    // 4. Compter total
     let countResult: any[] = [];
-    let message = "";
-    
-    if (columnsCheck.length === 0) {
-        message = "CRITICAL: La table 'beats' n'existe pas.";
-    } else {
-        rows = await sql`SELECT * FROM beats LIMIT 3`;
+    if (columnsCheck.length > 0) {
         countResult = await sql`SELECT COUNT(*) FROM beats`;
-        message = "Table 'beats' trouvée.";
     }
 
     return res.json({
-      status: "Debug Report",
+      status: "Debug Report v2",
+      connected_to_endpoint: endpointID,
+      target_id_search: "beat-1767791982327",
+      found_target: specificBeat.length > 0 ? "OUI - TROUVÉ !" : "NON - PAS TROUVÉ",
+      target_data: specificBeat[0] || null,
+      table_structure: columnsCheck.map(c => `${c.column_name} (${c.data_type})`),
+      total_rows: countResult.length > 0 ? countResult[0].count : 0,
       database_url_masked: DB_URL.replace(/:[^:]*@/, ':***@'),
-      tables: allTables.map(t => t.table_name),
-      beats_columns: columnsCheck.map(c => `${c.column_name} (${c.data_type})`),
-      beats_count: countResult.length > 0 ? countResult[0].count : 0,
-      sample_data: rows,
-      message
     });
 
   } catch (e: any) {
