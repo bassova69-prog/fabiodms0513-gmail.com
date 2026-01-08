@@ -56,7 +56,7 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
     return data;
   } catch (e: any) {
     if (e.message === "API_NOT_FOUND") {
-        console.warn(`[DB] API ${endpoint} non disponible.`);
+        console.warn(`[DB] API ${endpoint} non disponible (404).`);
     } else {
         console.warn(`[DB] Erreur fetch pour ${endpoint}:`, e.message);
     }
@@ -79,7 +79,8 @@ async function fetchItems<T>(endpoint: string): Promise<T[]> {
         return MEMORY_CACHE[endpoint].data;
     }
 
-    throw e;
+    // Au lieu de crash avec une erreur, on retourne un tableau vide si rien ne marche
+    return [] as any;
   }
 }
 

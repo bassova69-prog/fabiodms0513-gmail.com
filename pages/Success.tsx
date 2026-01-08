@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Download, CheckCircle2, ShoppingBag, ArrowRight, Loader2, Info, FileAudio, FolderArchive } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
@@ -12,6 +12,41 @@ export const Success: React.FC = () => {
   const [showDownloadTip, setShowDownloadTip] = useState(false);
   
   const purchasedItems = location.state?.items || [];
+  const hasRecordedRef = useRef(false);
+
+  // Synchronisation Comptable Automatique
+  useEffect(() => {
+    if (purchasedItems.length > 0 && !hasRecordedRef.current) {
+        hasRecordedRef.current = true;
+        
+        const syncToAccounting = async () => {
+             try {
+                const totalAmount = purchasedItems.reduce((acc: number, item: any) => acc + (Number(item.license.price) || 0), 0);
+                const beatNames = purchasedItems.map((i: any) => i.beat.title).slice(0, 3).join(', ') + (purchasedItems.length > 3 ? '...' : '');
+                
+                // Envoi à l'application de gestion externe
+                await fetch('https://gestion-fabio.vercel.app/api/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: new Date().toISOString(),
+                        label: `Vente BeatStore: ${beatNames}`,
+                        category: 'VENTE',
+                        amount: totalAmount,
+                        type: 'IN',
+                        status: 'PAYÉ',
+                        customer: 'Client Web'
+                    })
+                });
+                // console.log("Vente synchronisée avec la compta");
+             } catch (err) {
+                 console.error("Erreur sync compta:", err);
+             }
+        };
+        
+        syncToAccounting();
+    }
+  }, [purchasedItems]);
 
   const handleDownload = (item: any) => {
     const { beat, license, id } = item;
