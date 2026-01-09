@@ -20,7 +20,8 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
   
   const originalLowestPrice = beat.licenses?.[0]?.price || 0;
   
-  const lowestPrice = promo && promo.isActive
+  // Modification : On applique la réduction seulement si ce n'est PAS un Bulk Deal
+  const lowestPrice = promo && promo.isActive && promo.type !== 'BULK_DEAL'
     ? Number((originalLowestPrice * (1 - promo.discountPercentage / 100)).toFixed(2))
     : originalLowestPrice;
 
@@ -129,7 +130,10 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
                 <span className="text-[8px] text-[#5c4a3e] uppercase font-bold tracking-wider">À partir de</span>
                 <div className="flex items-baseline gap-1.5">
                     <span className={`font-black text-base ${promo && promo.isActive ? 'text-emerald-400' : 'text-white'}`}>{lowestPrice}€</span>
-                    {promo && promo.isActive && <span className="text-[9px] text-[#5c4a3e] line-through decoration-red-500/50">{originalLowestPrice}€</span>}
+                    {/* On cache le prix barré si c'est un Bulk Deal */}
+                    {promo && promo.isActive && promo.type !== 'BULK_DEAL' && (
+                        <span className="text-[9px] text-[#5c4a3e] line-through decoration-red-500/50">{originalLowestPrice}€</span>
+                    )}
                 </div>
              </div>
              

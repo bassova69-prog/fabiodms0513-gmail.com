@@ -173,13 +173,18 @@ export const BeatStore: React.FC = () => {
 
     if (promo && promo.isActive) {
       const isGlobal = promo.scope === 'GLOBAL';
-      // Comparaison sécurisée pour les IDs
       const isTargeted = promo.scope === 'SPECIFIC' && promo.targetBeatIds?.some(id => String(id) === String(beat.id));
       
-      // Si la promo est globale OU que le beat est ciblé, on applique la réduction mathématique
       if (isGlobal || isTargeted) {
-          finalPrice = Number((originalPrice * (1 - promo.discountPercentage / 100)).toFixed(2));
-          appliedPromoType = promo.type;
+          if (promo.type === 'BULK_DEAL') {
+             // Pour les offres groupées, on garde le prix original unitaire. 
+             // La réduction (gratuité) se fera dans le panier.
+             finalPrice = originalPrice;
+             appliedPromoType = 'BULK_DEAL';
+          } else {
+             finalPrice = Number((originalPrice * (1 - promo.discountPercentage / 100)).toFixed(2));
+             appliedPromoType = 'PERCENTAGE';
+          }
       }
     }
 
@@ -349,7 +354,7 @@ export const BeatStore: React.FC = () => {
                     const isAvailable = isLicenseAvailableForBeat(lic.fileType, selectedBeatForPurchase);
 
                     const discountedPrice = isValidPromo && promo 
-                        ? Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)) 
+                        ? (promo.type === 'BULK_DEAL' ? lic.price : Number((lic.price * (1 - promo.discountPercentage / 100)).toFixed(2)))
                         : lic.price;
                     const isExclusive = lic.fileType === 'EXCLUSIVE';
 
@@ -388,8 +393,11 @@ export const BeatStore: React.FC = () => {
                         </div>
                         <div className={`pt-4 border-t border-dashed ${!isAvailable ? 'border-[#1a120b]' : 'border-[#3d2b1f]'} flex items-center justify-between mt-auto`}>
                           <div className="flex flex-col">
-                            {isValidPromo && promo && isAvailable && <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>}
-                            <span className={`text-2xl font-black ${!isAvailable ? 'text-[#3d2b1f]' : (isValidPromo && promo ? 'text-emerald-400' : 'text-white')}`}>
+                            {/* On n'affiche pas de prix barré pour BULK_DEAL dans la modale non plus */}
+                            {isValidPromo && promo && isAvailable && promo.type !== 'BULK_DEAL' && (
+                                <span className="text-xs text-[#5c4a3e] line-through">{lic.price}€</span>
+                            )}
+                            <span className={`text-2xl font-black ${!isAvailable ? 'text-[#3d2b1f]' : (isValidPromo && promo && promo.type !== 'BULK_DEAL' ? 'text-emerald-400' : 'text-white')}`}>
                                 {isAvailable ? `${discountedPrice}€` : '-'}
                             </span>
                           </div>

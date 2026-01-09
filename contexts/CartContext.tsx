@@ -80,11 +80,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsCartOpen(prev => !prev);
   };
 
-  // Calcul sécurisé du total
-  const cartTotal = cartItems.reduce((total, item) => {
-    const price = typeof item.license?.price === 'number' ? item.license.price : 0;
-    return total + price;
-  }, 0);
+  // Calcul du total avec logique "3ème article BULK_DEAL offert"
+  const cartTotal = React.useMemo(() => {
+    let runningTotal = 0;
+    let bulkCount = 0;
+    
+    cartItems.forEach(item => {
+      if (item.promoType === 'BULK_DEAL') {
+        bulkCount++;
+        // Le 3ème, 6ème, 9ème... article ajouté est offert
+        if (bulkCount % 3 === 0) {
+           runningTotal += 0;
+        } else {
+           runningTotal += item.license.price;
+        }
+      } else {
+        runningTotal += item.license.price;
+      }
+    });
+    
+    return runningTotal;
+  }, [cartItems]);
 
   const cartCount = cartItems.length;
 

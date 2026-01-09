@@ -34,6 +34,9 @@ export const CartDrawer: React.FC = () => {
 
   if (!isCartOpen) return null;
 
+  // Compteur local pour l'affichage (logique identique à CartContext)
+  let bulkCount = 0;
+
   return (
     <>
       <div 
@@ -77,12 +80,22 @@ export const CartDrawer: React.FC = () => {
                     </div>
                 ) : (
                     cartItems.map((item) => {
-                        // Détection d'une remise appliquée
-                        const hasDiscount = item.originalPrice && item.originalPrice > item.license.price;
+                        // Logique d'affichage
                         const isBulk = item.promoType === 'BULK_DEAL';
+                        const isPercentage = item.promoType === 'PERCENTAGE';
+                        
+                        let isFree = false;
+                        if (isBulk) {
+                            bulkCount++;
+                            if (bulkCount % 3 === 0) {
+                                isFree = true;
+                            }
+                        }
+
+                        const hasDiscount = isPercentage && item.originalPrice && item.originalPrice > item.license.price;
                         
                         return (
-                            <div key={item.id} className="flex gap-4 p-4 bg-[#1a120b] rounded-2xl border border-[#3d2b1f] animate-in fade-in slide-in-from-right-4 group hover:border-amber-900/50 transition-colors">
+                            <div key={item.id} className={`flex gap-4 p-4 rounded-2xl border animate-in fade-in slide-in-from-right-4 group transition-colors ${isFree ? 'bg-amber-900/10 border-amber-500/30' : 'bg-[#1a120b] border-[#3d2b1f] hover:border-amber-900/50'}`}>
                                 <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden border border-[#3d2b1f] bg-black">
                                     <img src={item.beat?.cover_url} className="w-full h-full object-cover" alt={item.beat?.title} />
                                 </div>
@@ -98,22 +111,26 @@ export const CartDrawer: React.FC = () => {
                                             <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-900/30 bg-amber-900/10 text-amber-400 font-black inline-block uppercase">
                                                 {item.license?.name}
                                             </span>
-                                            {hasDiscount && (
-                                                <span className={`text-[9px] flex items-center gap-1 font-bold ${isBulk ? 'text-amber-500' : 'text-emerald-400'}`}>
-                                                    {isBulk ? <Zap className="w-3 h-3" /> : <Tag className="w-3 h-3" />}
-                                                    {isBulk ? 'OFFRE' : 'REMISE'}
+                                            {isFree ? (
+                                                <span className="text-[9px] flex items-center gap-1 font-bold text-amber-500">
+                                                    <Zap className="w-3 h-3" /> OFFERT
+                                                </span>
+                                            ) : hasDiscount && (
+                                                <span className="text-[9px] flex items-center gap-1 font-bold text-emerald-400">
+                                                    <Tag className="w-3 h-3" /> REMISE
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                     <div className="flex justify-end items-center gap-2">
+                                        {/* Prix barré uniquement pour remise %, PAS pour offre groupée */}
                                         {hasDiscount && (
                                             <span className="text-xs text-[#5c4a3e] line-through decoration-red-500/50">
                                                 {item.originalPrice?.toFixed(2)}€
                                             </span>
                                         )}
-                                        <span className={`font-black text-lg ${hasDiscount ? 'text-emerald-400' : 'text-white'}`}>
-                                            {(Number(item.license?.price) || 0).toFixed(2)}€
+                                        <span className={`font-black text-lg ${isFree || hasDiscount ? (isFree ? 'text-amber-500' : 'text-emerald-400') : 'text-white'}`}>
+                                            {isFree ? '0.00€' : `${(Number(item.license?.price) || 0).toFixed(2)}€`}
                                         </span>
                                     </div>
                                 </div>
