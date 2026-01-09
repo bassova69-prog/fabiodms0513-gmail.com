@@ -1,5 +1,5 @@
 
-import { Beat } from '../types';
+import { Beat, StorePromotion } from '../types';
 
 export const initDB = async (): Promise<void> => Promise.resolve();
 
@@ -142,6 +142,20 @@ export const checkConnection = async (): Promise<{ success: boolean; message: st
 export const saveBeat = (beat: Beat) => saveItem('beats', beat);
 export const getAllBeats = () => fetchItems<Beat>('beats');
 export const deleteBeat = (id: string) => deleteItem('beats', id);
+
+export const getActivePromotion = async (): Promise<StorePromotion | null> => {
+    try {
+        // On interroge la nouvelle API dédiée qui lit la table store_promotions
+        const res = await fetch(`/api/promotions?t=${Date.now()}`);
+        if (res.ok) {
+            const data = await res.json();
+            return data;
+        }
+    } catch (e) {
+        console.error("Error fetching promotion:", e);
+    }
+    return null;
+};
 
 export const getSetting = async <T>(key: string): Promise<T | null> => {
   const cacheKey = `setting_${key}`;

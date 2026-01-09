@@ -5,7 +5,7 @@ import { BeatCard } from '../components/BeatCard';
 import { ShoppingBag, Tag, Zap, Search, X, Check, Headphones, Radio, Layers, Crown, Music2, RefreshCw, AlertTriangle, WifiOff, Database, FileX, Filter } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { Beat, StorePromotion, License } from '../types';
-import { getAllBeats, getSetting } from '../services/dbService';
+import { getAllBeats, getActivePromotion } from '../services/dbService';
 import { usePlayer } from '../contexts/PlayerContext';
 
 export const BeatStore: React.FC = () => {
@@ -88,6 +88,7 @@ export const BeatStore: React.FC = () => {
   const checkPromo = useCallback(async () => {
     const urlPromoMessage = searchParams.get('promo');
     
+    // 1. Priorité : Paramètres URL (Lien Marketing)
     if (urlPromoMessage) {
         const urlPromoBG = searchParams.get('bg');
         const urlPct = searchParams.get('pct') || searchParams.get('percent') || searchParams.get('discount') || searchParams.get('val') || searchParams.get('value'); 
@@ -97,7 +98,7 @@ export const BeatStore: React.FC = () => {
         // Si 'buy' n'est pas dans l'URL, on essaie de le deviner du message
         const threshold = urlBuy ? parseInt(urlBuy) : getBulkThresholdFromMessage(urlPromoMessage);
 
-        setPromo({
+        const newPromo: StorePromotion = {
           isActive: true,
           message: urlPromoMessage,
           discountPercentage: urlPct ? parseInt(urlPct) : 20,
@@ -105,16 +106,29 @@ export const BeatStore: React.FC = () => {
           scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
           targetBeatIds: urlIds ? urlIds.split(',') : [],
           bulkThreshold: threshold
-        });
+        };
+
+        setPromo(newPromo);
+        // Persistance pour la navigation (Session Storage)
+        sessionStorage.setItem('fabio_active_promo', JSON.stringify(newPromo));
         return;
     }
 
+    // 2. Vérification Session Storage (Retour sur la page sans params URL)
     try {
-      const rawDbPromo = await getSetting<any>('promo');
-      let dbPromo: StorePromotion | null = rawDbPromo;
-      if (typeof rawDbPromo === 'string') {
-          try { dbPromo = JSON.parse(rawDbPromo); } catch (e) {}
-      }
+        const savedSessionPromo = sessionStorage.getItem('fabio_active_promo');
+        if (savedSessionPromo) {
+            const parsedPromo = JSON.parse(savedSessionPromo);
+            if (parsedPromo && parsedPromo.isActive) {
+                setPromo(parsedPromo);
+                return;
+            }
+        }
+    } catch(e) {}
+
+    // 3. Fallback : Configuration Globale DB (Table store_promotions)
+    try {
+      const dbPromo = await getActivePromotion();
       
       if (dbPromo && dbPromo.isActive) {
           // Si le seuil n'est pas défini en base, on le déduit du message
@@ -123,9 +137,12 @@ export const BeatStore: React.FC = () => {
           }
           setPromo(dbPromo);
       } else {
+          // Si aucune promo URL, Session, ni DB, on s'assure que c'est null
           setPromo(null);
       }
-    } catch (err) {}
+    } catch (err) {
+        console.error("Erreur chargement promo DB:", err);
+    }
   }, [searchParams]);
 
   useEffect(() => {
