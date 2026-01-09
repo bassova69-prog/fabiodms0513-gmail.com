@@ -142,7 +142,7 @@ export const Home: React.FC = () => {
       <section className="px-2">
         <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
             <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
-              <GraduationCap className="w-8 h-8 text-emerald-500" /> Formation
+              <GraduationCap className="w-8 h-8 text-emerald-500" /> Coaching
             </h2>
         </div>
 
