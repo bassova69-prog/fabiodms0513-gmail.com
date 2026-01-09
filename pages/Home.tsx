@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ARTIST_NAME } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, User, Video, Youtube } from 'lucide-react';
+import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, Youtube, Clock } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { getAllBeats } from '../services/dbService';
 import { Beat } from '../types';
@@ -146,47 +146,26 @@ export const Home: React.FC = () => {
             </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="relative rounded-[2rem] overflow-hidden border border-[#2a2a2a] bg-[#121212] flex flex-col md:flex-row group">
-                <div className="p-8 flex flex-col h-full w-full">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 bg-emerald-900/20 rounded-xl flex items-center justify-center border border-emerald-500/20">
-                             <User className="w-6 h-6 text-emerald-400" />
-                        </div>
-                        <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase">Populaire</span>
-                    </div>
-                    <h3 className="text-2xl font-black text-white mb-2 uppercase italic">Mentorat Privé</h3>
-                    <p className="text-[#a89080] text-sm mb-6">
-                        2 heures de coaching 1-on-1. Analyse de tes prods, mixage et conseils carrière personnalisés.
-                    </p>
-                    <div className="flex items-center justify-between mt-auto pt-6 border-t border-[#2a2a2a]">
-                        <span className="text-2xl font-black text-white">149€</span>
-                        <button className="bg-emerald-600 text-white font-black px-6 py-2.5 rounded-lg text-xs uppercase hover:bg-emerald-500 transition-colors">
-                            Réserver
-                        </button>
-                    </div>
+        <div className="rounded-[2rem] border border-[#2a2a2a] bg-[#121212] p-12 text-center relative overflow-hidden group">
+            {/* Background effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/10 to-transparent opacity-50"></div>
+            
+            <div className="relative z-10 flex flex-col items-center justify-center animate-in zoom-in-95 duration-700">
+                <div className="w-20 h-20 bg-[#1a1a1a] rounded-full flex items-center justify-center mb-6 border border-[#2a2a2a] group-hover:scale-110 transition-transform duration-500 shadow-xl shadow-emerald-900/10">
+                    <Clock className="w-10 h-10 text-[#8c7a6b]" />
                 </div>
-             </div>
-
-             <div className="relative rounded-[2rem] overflow-hidden border border-[#2a2a2a] bg-[#121212] flex flex-col md:flex-row group">
-                <div className="p-8 flex flex-col h-full w-full">
-                     <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 bg-amber-900/20 rounded-xl flex items-center justify-center border border-amber-500/20">
-                             <Video className="w-6 h-6 text-amber-500" />
-                        </div>
-                    </div>
-                    <h3 className="text-2xl font-black text-white mb-2 uppercase italic">Pack Formation Vidéo</h3>
-                    <p className="text-[#a89080] text-sm mb-6">
-                        Accès immédiat à 10h de vidéos. Apprends mes techniques de composition pour les placements Afro/Pop.
-                    </p>
-                    <div className="flex items-center justify-between mt-auto pt-6 border-t border-[#2a2a2a]">
-                        <span className="text-2xl font-black text-white">97€</span>
-                        <button onClick={() => navigate('/masterclass')} className="bg-white text-black font-black px-6 py-2.5 rounded-lg text-xs uppercase hover:bg-amber-500 transition-colors">
-                            Voir le programme
-                        </button>
-                    </div>
+                <h3 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mb-4">
+                    Arrive Bientôt
+                </h3>
+                <p className="text-[#8c7a6b] max-w-lg mx-auto text-lg mb-8 font-medium">
+                    L'académie de production est en cours de finalisation. Préparez-vous à découvrir mes secrets de composition Afro & Pop.
+                </p>
+                <div className="flex gap-2">
+                    <button disabled className="bg-[#2a2a2a] text-[#5c4a3e] font-black px-8 py-4 rounded-xl cursor-not-allowed uppercase text-xs tracking-widest border border-[#3d2b1f] opacity-70">
+                        Prochainement
+                    </button>
                 </div>
-             </div>
+            </div>
         </div>
       </section>
 

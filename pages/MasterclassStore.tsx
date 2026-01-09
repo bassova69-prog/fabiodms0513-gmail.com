@@ -1,62 +1,57 @@
+
 import React from 'react';
-import { MASTERCLASSES } from '../constants';
-import { CheckCircle2, PlayCircle } from 'lucide-react';
+import { GraduationCap, Clock, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const MasterclassStore: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="pb-20 max-w-5xl mx-auto">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4 text-[#fff8f0]">L'Académie <span className="text-amber-500">Fabio DMS</span></h1>
-        <p className="text-xl text-[#a89080] max-w-2xl mx-auto">
-            Passez de beatmaker amateur à producteur pro. J'analyse mes sessions avec Tayc et Dadju pour vous montrer mes techniques.
-        </p>
+    <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 animate-in fade-in zoom-in-95 duration-500">
+      
+      <div className="relative mb-8">
+         <div className="absolute inset-0 bg-amber-500 blur-[60px] opacity-20 rounded-full animate-pulse"></div>
+         <div className="w-32 h-32 bg-[#1a120b] rounded-full flex items-center justify-center border-2 border-[#3d2b1f] relative z-10 shadow-2xl">
+            <GraduationCap className="w-16 h-16 text-amber-500" />
+         </div>
+         <div className="absolute -bottom-2 -right-2 bg-[#1a120b] p-2 rounded-full border border-[#3d2b1f] z-20">
+            <Clock className="w-6 h-6 text-[#8c7a6b]" />
+         </div>
       </div>
 
-      <div className="grid gap-8">
-        {MASTERCLASSES.map(mc => (
-            <div key={mc.id} className="flex flex-col md:flex-row bg-[#1e1510] rounded-2xl overflow-hidden border border-[#3d2b1f] group hover:border-amber-700/30 transition-all">
-                <div className="md:w-2/5 relative">
-                    <img src={mc.thumbnailUrl} alt={mc.title} className="w-full h-full object-cover min-h-[200px] sepia-[.2]" />
-                    <div className="absolute inset-0 bg-[#1a120b]/20"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <PlayCircle className="w-16 h-16 text-[#fff8f0] opacity-80 group-hover:scale-110 transition-transform" />
-                    </div>
-                </div>
-                <div className="p-6 md:w-3/5 flex flex-col justify-between">
-                    <div>
-                        <div className="flex justify-between items-start">
-                            <h2 className="text-2xl font-bold mb-2 text-[#fff8f0]">{mc.title}</h2>
-                            <span className="bg-amber-900/30 text-amber-300 px-3 py-1 rounded-full text-xs font-bold border border-amber-800">{mc.level}</span>
-                        </div>
-                        <p className="text-[#a89080] mb-6">{mc.description}</p>
-                        <ul className="space-y-2 mb-6">
-                            <li className="flex items-center gap-2 text-sm text-[#8c7a6b]">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                Accès illimité aux vidéos
-                            </li>
-                            <li className="flex items-center gap-2 text-sm text-[#8c7a6b]">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                Fichiers sources inclus (Stems)
-                            </li>
-                             <li className="flex items-center gap-2 text-sm text-[#8c7a6b]">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                Certification de fin de parcours
-                            </li>
-                        </ul>
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-[#3d2b1f]">
-                         <div>
-                            <span className="block text-xs text-[#5c4a3e]">Prix total</span>
-                            <span className="text-2xl font-bold text-[#fff8f0]">{mc.price}€</span>
-                         </div>
-                         <button className="bg-[#d4a373] text-[#1a120b] font-bold py-2 px-6 rounded-full hover:bg-[#e6b98e] transition-colors shadow-lg">
-                            Rejoindre
-                         </button>
-                    </div>
-                </div>
-            </div>
-        ))}
+      <h1 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter mb-6 drop-shadow-2xl">
+        Académie <span className="text-amber-500 text-stroke">Fabio DMS</span>
+      </h1>
+
+      <div className="bg-[#1a120b] border border-[#3d2b1f] p-10 rounded-[2rem] max-w-2xl w-full relative overflow-hidden group hover:border-amber-900/50 transition-colors">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+        
+        <h2 className="text-3xl font-black text-white mb-6 uppercase flex items-center justify-center gap-3">
+            <AlertCircle className="w-8 h-8 text-amber-500" />
+            Arrive Bientôt
+        </h2>
+        
+        <p className="text-[#a89080] text-lg font-medium leading-relaxed mb-8">
+            Je travaille actuellement sur une série de masterclasses exclusives.<br/>
+            Vous apprendrez bientôt mes techniques de composition, d'arrangement et de mixage pour atteindre un niveau professionnel.
+        </p>
+
+        <div className="inline-flex flex-col gap-2 w-full max-w-xs">
+             <button 
+                disabled
+                className="w-full bg-[#2a1e16] text-[#5c4a3e] font-black py-4 rounded-xl uppercase text-xs tracking-[0.2em] border border-[#3d2b1f] cursor-not-allowed"
+             >
+                Ouverture Prochaine
+             </button>
+             <button 
+                onClick={() => navigate('/')}
+                className="text-[#8c7a6b] text-xs font-bold hover:text-white transition-colors mt-4 uppercase tracking-wider"
+             >
+                Retour à l'accueil
+             </button>
+        </div>
       </div>
+
     </div>
   );
 };
