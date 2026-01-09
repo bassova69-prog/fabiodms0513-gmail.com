@@ -65,6 +65,26 @@ export const BeatStore: React.FC = () => {
       });
   };
 
+  // Helper pour déduire le seuil de l'offre (1 acheté, 2 achetés...) depuis le texte
+  const getBulkThresholdFromMessage = (message: string): number => {
+    if (!message) return 2;
+    const clean = message.toLowerCase();
+    
+    // Détection explicite "1 acheté"
+    const match = clean.match(/(\d+)\s*achet/);
+    if (match && match[1]) {
+        const val = parseInt(match[1]);
+        return val > 0 ? val : 2;
+    }
+
+    // Fallbacks courants
+    if (clean.includes('buy 1') || clean.includes('1 payé')) return 1;
+    if (clean.includes('buy 2') || clean.includes('2 payés')) return 2;
+    if (clean.includes('buy 3') || clean.includes('3 payés')) return 3;
+    
+    return 2; // Valeur par défaut standard (Buy 2 Get 1 Free)
+  };
+
   const checkPromo = useCallback(async () => {
     const urlPromoMessage = searchParams.get('promo');
     
@@ -74,14 +94,17 @@ export const BeatStore: React.FC = () => {
         const urlIds = searchParams.get('ids'); 
         const urlBuy = searchParams.get('buy'); // Paramètre pour "Buy X Get 1 Free"
         
+        // Si 'buy' n'est pas dans l'URL, on essaie de le deviner du message
+        const threshold = urlBuy ? parseInt(urlBuy) : getBulkThresholdFromMessage(urlPromoMessage);
+
         setPromo({
           isActive: true,
           message: urlPromoMessage,
           discountPercentage: urlPct ? parseInt(urlPct) : 20,
-          type: (urlPromoBG === 'orange' || urlPromoMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
+          type: (urlPromoBG === 'orange' || urlPromoMessage.toLowerCase().includes('offert')) ? 'BULK_DEAL' : 'PERCENTAGE',
           scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
           targetBeatIds: urlIds ? urlIds.split(',') : [],
-          bulkThreshold: urlBuy ? parseInt(urlBuy) : 2 // Défaut: 2 (2 achetés = 1 offert)
+          bulkThreshold: threshold
         });
         return;
     }
@@ -92,8 +115,16 @@ export const BeatStore: React.FC = () => {
       if (typeof rawDbPromo === 'string') {
           try { dbPromo = JSON.parse(rawDbPromo); } catch (e) {}
       }
-      if (dbPromo && dbPromo.isActive) setPromo(dbPromo);
-      else setPromo(null);
+      
+      if (dbPromo && dbPromo.isActive) {
+          // Si le seuil n'est pas défini en base, on le déduit du message
+          if (!dbPromo.bulkThreshold && dbPromo.message) {
+              dbPromo.bulkThreshold = getBulkThresholdFromMessage(dbPromo.message);
+          }
+          setPromo(dbPromo);
+      } else {
+          setPromo(null);
+      }
     } catch (err) {}
   }, [searchParams]);
 
@@ -184,7 +215,8 @@ export const BeatStore: React.FC = () => {
              // La réduction (gratuité) se fera dans le panier.
              finalPrice = originalPrice;
              appliedPromoType = 'BULK_DEAL';
-             appliedBulkThreshold = promo.bulkThreshold || 2;
+             // On s'assure d'avoir un seuil valide (par défaut 2 si non défini)
+             appliedBulkThreshold = promo.bulkThreshold || getBulkThresholdFromMessage(promo.message) || 2;
           } else {
              finalPrice = Number((originalPrice * (1 - promo.discountPercentage / 100)).toFixed(2));
              appliedPromoType = 'PERCENTAGE';

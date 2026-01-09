@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Download, CheckCircle2, ShoppingBag, ArrowRight, Loader2, Info, FileAudio, FolderArchive } from 'lucide-react';
+import { Download, CheckCircle2, ShoppingBag, ArrowRight, Loader2, Info, FileAudio, FolderArchive, Mail } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { CustomerDetails } from '../types';
 
 export const Success: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export const Success: React.FC = () => {
   const [showDownloadTip, setShowDownloadTip] = useState(false);
   
   const purchasedItems = location.state?.items || [];
+  const customer: CustomerDetails | undefined = location.state?.customer;
   const hasRecordedRef = useRef(false);
 
   // Synchronisation Comptable Automatique
@@ -23,6 +25,7 @@ export const Success: React.FC = () => {
              try {
                 const totalAmount = purchasedItems.reduce((acc: number, item: any) => acc + (Number(item.license.price) || 0), 0);
                 const beatNames = purchasedItems.map((i: any) => i.beat.title).slice(0, 3).join(', ') + (purchasedItems.length > 3 ? '...' : '');
+                const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Client Web';
                 
                 // Envoi à l'application de gestion externe
                 await fetch('https://gestion-fabio.vercel.app/api/transactions', {
@@ -35,7 +38,7 @@ export const Success: React.FC = () => {
                         amount: totalAmount,
                         type: 'IN',
                         status: 'PAYÉ',
-                        customer: 'Client Web'
+                        customer: customerName
                     })
                 });
                 // console.log("Vente synchronisée avec la compta");
@@ -46,7 +49,7 @@ export const Success: React.FC = () => {
         
         syncToAccounting();
     }
-  }, [purchasedItems]);
+  }, [purchasedItems, customer]);
 
   const handleDownload = (item: any) => {
     const { beat, license, id } = item;
@@ -103,12 +106,19 @@ export const Success: React.FC = () => {
             <CheckCircle2 className="w-12 h-12 text-emerald-500" />
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase mb-4 leading-none">
-            COMMANDE <span className="text-amber-500 text-stroke">PRÊTE</span>
+          <h1 className="text-4xl md:text-6xl font-black text-white italic tracking-tighter uppercase mb-2 leading-none">
+            COMMANDE <span className="text-amber-500 text-stroke">REÇUE</span>
           </h1>
-          <p className="text-[#a89080] text-lg mb-8 max-w-lg font-medium">
-            Tes fichiers sont prêts au téléchargement. Merci de ta confiance !
+          <p className="text-[#a89080] text-lg mb-4 max-w-lg font-medium">
+            Merci {customer?.firstName || 'pour ta confiance'} ! Tes fichiers sont prêts.
           </p>
+          
+          {customer && (
+              <div className="mb-8 flex items-center gap-2 bg-[#2a1e16] px-4 py-2 rounded-full border border-[#3d2b1f]">
+                 <Mail className="w-4 h-4 text-amber-500" />
+                 <span className="text-xs text-[#d4a373]">Facture envoyée à : <span className="text-white font-bold">{customer.email}</span></span>
+              </div>
+          )}
 
           {showDownloadTip && (
             <div className="mb-8 p-4 bg-amber-900/10 border border-amber-900/30 rounded-2xl flex items-start gap-3 text-left animate-in slide-in-from-top-2">

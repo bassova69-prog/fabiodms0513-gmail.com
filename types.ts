@@ -59,6 +59,16 @@ export interface CartItem {
   bulkThreshold?: number;
 }
 
+export interface CustomerDetails {
+  firstName: string;
+  lastName: string;
+  email: string;
+  address: string;
+  city: string;
+  zipCode: string;
+  country: string;
+}
+
 // Utilisé pour l'enregistrement des ventes dans Success.tsx
 export interface Transaction {
   id: string;
