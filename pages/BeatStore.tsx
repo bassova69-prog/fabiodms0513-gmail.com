@@ -112,7 +112,8 @@ export const BeatStore: React.FC = () => {
         if (filterType) {
             switch (filterType) {
                 case 'MP3':
-                    typeMatch = !!(beat.mp3_url || beat.audioUrl);
+                    // Vérification stricte du lien MP3
+                    typeMatch = !!beat.mp3_url;
                     break;
                 case 'WAV':
                     typeMatch = !!beat.wav_url;
@@ -151,7 +152,8 @@ export const BeatStore: React.FC = () => {
   const isLicenseAvailableForBeat = (fileType: string, beat: Beat) => {
     switch (fileType) {
         case 'MP3':
-            return !!(beat.mp3_url || beat.audioUrl);
+            // Vérification stricte du lien MP3
+            return !!beat.mp3_url;
         case 'WAV':
             return !!beat.wav_url;
         case 'TRACKOUT':
