@@ -38,21 +38,108 @@ ${formData.message}
       return { to: 'fabiodmsbeats@gmail.com', subject, body };
   };
 
+  // Détection intelligente du fournisseur de mail
+  const getProviderInfo = () => {
+      const email = (formData.email || '').toLowerCase().trim();
+      const { to, subject, body } = getEmailData();
+      const encodedSubject = encodeURIComponent(subject);
+      const encodedBody = encodeURIComponent(body);
+
+      // Outlook / Hotmail / Live / MSN
+      if (email.match(/@(outlook|hotmail|live|msn)\./)) {
+          return {
+              name: 'Outlook',
+              url: `https://outlook.live.com/mail/0/deeplink/compose?to=${to}&subject=${encodedSubject}&body=${encodedBody}`,
+              color: 'bg-[#0078d4] hover:bg-[#005a9e]',
+              isWebmail: true
+          };
+      }
+      
+      // Yahoo / Ymail / Rocketmail
+      if (email.match(/@(yahoo|ymail|rocketmail)\./)) {
+          return {
+              name: 'Yahoo Mail',
+              url: `https://compose.mail.yahoo.com/?to=${to}&subject=${encodedSubject}&body=${encodedBody}`,
+              color: 'bg-[#6001d2] hover:bg-[#4a00a0]',
+              isWebmail: true
+          };
+      }
+
+      // Gmail / Googlemail
+      if (email.match(/@(gmail|googlemail)\./)) {
+         return {
+            name: 'Gmail',
+            url: `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${encodedSubject}&body=${encodedBody}`,
+            color: 'bg-[#ea4335] hover:bg-[#d93025]',
+            isWebmail: true
+         };
+      }
+
+      // AOL / AIM
+      if (email.match(/@(aol|aim)\./)) {
+          return {
+              name: 'AOL Mail',
+              // AOL ne supporte pas le deep-linking fiable pour le pré-remplissage. On ouvre l'inbox.
+              url: `https://mail.aol.com/`, 
+              color: 'bg-[#3366cc] hover:bg-[#2a55aa]', // Bleu AOL
+              isWebmail: true
+          };
+      }
+
+      // iCloud / Me / Mac
+      if (email.match(/@(icloud|me|mac)\./)) {
+          return {
+              name: 'iCloud Mail',
+              url: `https://www.icloud.com/mail`,
+              color: 'bg-[#3699f0] hover:bg-[#2b7bc0]',
+              isWebmail: true
+          };
+      }
+
+      // ProtonMail
+      if (email.match(/@(proton|protonmail)\./)) {
+          return {
+              name: 'Proton Mail',
+              url: `https://mail.proton.me/u/0/compose?to=${to}&subject=${encodedSubject}&body=${encodedBody}`,
+              color: 'bg-[#6d4aff] hover:bg-[#5839cc]',
+              isWebmail: true
+          };
+      }
+
+      // Par défaut : on ne connait pas le webmail, on utilisera mailto
+      return {
+          name: 'App Mail',
+          url: `mailto:${to}?subject=${encodedSubject}&body=${encodedBody}`,
+          color: 'bg-[#3d2b1f] hover:bg-[#5c4a3e]',
+          isWebmail: false
+      };
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const provider = getProviderInfo();
+    const { to, subject, body } = getEmailData();
+
+    // On ouvre IMMÉDIATEMENT pour éviter les bloqueurs de pop-up
+    // Si c'est un webmail connu, on ouvre dans un nouvel onglet
+    let opened = false;
+    if (provider.isWebmail) {
+        const newWindow = window.open(provider.url, '_blank');
+        if (newWindow) opened = true;
+    }
+
+    // Si ce n'est pas un webmail connu OU si l'ouverture a échoué (popup blocker), on fallback sur mailto
+    if (!opened) {
+        window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }
+
+    // On affiche l'écran de succès juste après
     setTimeout(() => {
-      const { to, subject, body } = getEmailData();
-      const mailtoLink = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      
-      // Tentative d'ouverture du client mail
-      window.location.href = mailtoLink;
-      
       setIsSubmitting(false);
       setIsSent(true);
-      // Pas de reset automatique pour laisser le temps de copier si besoin
-    }, 1500);
+    }, 1000);
   };
 
   const handleCopy = (text: string, key: string) => {
@@ -64,6 +151,7 @@ ${formData.message}
   };
 
   const { to, subject, body } = getEmailData();
+  const provider = getProviderInfo();
 
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-500 pb-20">
@@ -89,16 +177,34 @@ ${formData.message}
              </div>
              <h2 className="text-3xl font-black text-white uppercase italic mb-2">Message Prêt !</h2>
              <p className="text-[#a89080] max-w-md mb-8">
-               Ton client mail s'est ouvert. Vérifie et clique sur "Envoyer" pour que <strong>Fabio</strong> reçoive ta demande.
+               {provider.isWebmail 
+                  ? `Une fenêtre ${provider.name} s'est ouverte. Vérifie et clique sur "Envoyer".` 
+                  : `Ton logiciel de messagerie devrait s'être ouvert.`}
              </p>
 
              <div className="w-full bg-[#120a05]/50 border border-[#3d2b1f] rounded-xl p-6 text-left mb-8">
                 <div className="flex items-center gap-2 mb-4 text-amber-500">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-widest">Ça ne s'est pas ouvert ?</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">
+                       {provider.name === 'AOL Mail' || provider.name === 'iCloud Mail' 
+                          ? "Copie les infos manuellement :" 
+                          : "Ça ne s'est pas ouvert ?"}
+                    </span>
                 </div>
-                <p className="text-[10px] text-[#5c4a3e] mb-4">
-                    Copie les éléments ci-dessous et envoie-les manuellement depuis ta boîte mail.
+                
+                {/* BOUTON DYNAMIQUE SELON LE MAIL SAISI */}
+                <a 
+                   href={provider.url} 
+                   target={provider.isWebmail ? "_blank" : "_self"}
+                   rel="noopener noreferrer"
+                   className={`w-full ${provider.color} text-white font-black py-3 rounded-lg mb-6 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 text-xs uppercase tracking-widest`}
+                >
+                    <Mail className="w-4 h-4" /> 
+                    {provider.isWebmail ? `Aller sur ${provider.name}` : `Réessayer avec l'app par défaut`}
+                </a>
+
+                <p className="text-[10px] text-[#5c4a3e] mb-4 text-center border-t border-[#3d2b1f] pt-4">
+                    Ou copie les éléments manuellement :
                 </p>
 
                 <div className="space-y-3">
