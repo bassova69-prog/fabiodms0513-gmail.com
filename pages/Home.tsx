@@ -106,10 +106,10 @@ export const Home: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-                { name: 'MP3 LEASE', price: '29.99', icon: <Music className="text-blue-400" />, features: ['MP3 Untagged', '500k Streams', 'Usage Commercial'] },
-                { name: 'WAV LEASE', price: '49.99', icon: <Music4 className="text-cyan-400" />, features: ['WAV + MP3', 'Unlimited Streams', 'Radio Ready'] },
-                { name: 'TRACKOUT', price: '99.99', icon: <Layers className="text-orange-400" />, features: ['Stems (Pistes séparées)', 'Unlimited Streams', 'Idéal Studio'] },
-                { name: 'EXCLUSIF', price: 'Sur devis', icon: <Crown className="text-amber-500" />, features: ['Droits exclusifs', 'Retrait du catalogue', 'Publishing 50/50'] },
+                { name: 'MP3 LEASE', code: 'MP3', price: '29.99', icon: <Music className="text-blue-400" />, features: ['MP3 Untagged', '500k Streams', 'Usage Commercial'] },
+                { name: 'WAV LEASE', code: 'WAV', price: '49.99', icon: <Music4 className="text-cyan-400" />, features: ['WAV + MP3', 'Unlimited Streams', 'Radio Ready'] },
+                { name: 'TRACKOUT', code: 'TRACKOUT', price: '99.99', icon: <Layers className="text-orange-400" />, features: ['Stems (Pistes séparées)', 'Unlimited Streams', 'Idéal Studio'] },
+                { name: 'EXCLUSIF', code: 'EXCLUSIVE', price: 'Sur devis', icon: <Crown className="text-amber-500" />, features: ['Droits exclusifs', 'Retrait du catalogue', 'Publishing 50/50'] },
             ].map((tier, i) => (
                 <div key={i} className="p-6 rounded-2xl bg-[#121212] border border-[#2a2a2a] hover:border-amber-500/30 transition-all flex flex-col justify-between group h-full hover:-translate-y-1">
                     <div>
@@ -129,7 +129,7 @@ export const Home: React.FC = () => {
                         </ul>
                     </div>
                     <button 
-                      onClick={() => navigate('/beats')} 
+                      onClick={() => navigate(`/beats?type=${tier.code}`)} 
                       className="w-full py-3 rounded-lg bg-[#1a1a1a] text-white font-black uppercase text-[10px] hover:bg-white hover:text-black transition-all border border-[#2a2a2a] hover:border-transparent active:scale-95"
                     >
                       Choisir
