@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Play, ShoppingCart, Youtube, Tag, BarChart3, Calendar } from 'lucide-react';
+import { Play, ShoppingCart, Youtube, Tag, BarChart3, Calendar, Zap } from 'lucide-react';
 import { Beat, StorePromotion } from '../types';
 import { usePlayer } from '../contexts/PlayerContext';
 
@@ -71,9 +71,15 @@ export const BeatCard: React.FC<BeatCardProps> = ({ beat, promo, onPurchase }) =
         <div className="absolute top-2 left-2 right-2 flex justify-between">
           <div className="flex gap-1">
             {promo && promo.isActive && (
-                <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
-                <Tag className="w-2.5 h-2.5 fill-current" /> -{promo.discountPercentage}%
-                </div>
+                promo.type === 'BULK_DEAL' ? (
+                    <div className="bg-amber-500 text-black text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
+                        <Zap className="w-2.5 h-2.5 fill-current" /> OFFRE
+                    </div>
+                ) : (
+                    <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg flex items-center gap-1">
+                        <Tag className="w-2.5 h-2.5 fill-current" /> -{promo.discountPercentage}%
+                    </div>
+                )
             )}
           </div>
           <div className="flex gap-1">
