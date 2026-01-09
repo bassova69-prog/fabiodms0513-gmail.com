@@ -1,9 +1,9 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Trash2, ShoppingBag, CreditCard, Lock, Loader2, Tag, Zap, ChevronLeft, User, MapPin, Mail } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
-import { CustomerDetails } from '../types';
+import { CustomerDetails, CartItem } from '../types';
 
 export const CartDrawer: React.FC = () => {
   const { isCartOpen, toggleCart, cartItems, removeFromCart, cartTotal, clearCart } = useCart();
@@ -33,6 +33,40 @@ export const CartDrawer: React.FC = () => {
       setTimeout(() => setView('cart'), 300);
     }
   }, [isCartOpen]);
+
+  // Calcul des IDs des articles gratuits (pour l'affichage "OFFERT")
+  // Doit correspondre à la logique du CartContext (Les moins chers sont offerts)
+  const freeItemIds = useMemo(() => {
+    const freeIds = new Set<string>();
+    const bulkGroups: Record<number, CartItem[]> = {};
+
+    // Groupement
+    cartItems.forEach(item => {
+      if (item.promoType === 'BULK_DEAL') {
+        const threshold = item.bulkThreshold || 2;
+        if (!bulkGroups[threshold]) bulkGroups[threshold] = [];
+        bulkGroups[threshold].push(item);
+      }
+    });
+
+    // Identification des gratuits
+    Object.keys(bulkGroups).forEach(key => {
+        const threshold = parseInt(key);
+        const items = [...bulkGroups[threshold]]; // Copie pour ne pas muter l'original
+        
+        // Tri décroissant par prix
+        items.sort((a, b) => b.license.price - a.license.price);
+
+        const bundleSize = threshold + 1;
+        const freeCount = Math.floor(items.length / bundleSize);
+
+        // Les 'freeCount' derniers articles sont gratuits
+        const freeItems = items.slice(items.length - freeCount);
+        freeItems.forEach(item => freeIds.add(item.id));
+    });
+
+    return freeIds;
+  }, [cartItems]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -87,9 +121,6 @@ export const CartDrawer: React.FC = () => {
 
   if (!isCartOpen) return null;
 
-  // Compteur local pour l'affichage (logique identique à CartContext)
-  const bulkCounts: Record<number, number> = {};
-
   return (
     <>
       <div 
@@ -143,18 +174,8 @@ export const CartDrawer: React.FC = () => {
                       </div>
                   ) : (
                       cartItems.map((item) => {
-                          const isBulk = item.promoType === 'BULK_DEAL';
+                          const isFree = freeItemIds.has(item.id);
                           const isPercentage = item.promoType === 'PERCENTAGE';
-                          
-                          let isFree = false;
-                          if (isBulk) {
-                              const threshold = item.bulkThreshold || 2;
-                              bulkCounts[threshold] = (bulkCounts[threshold] || 0) + 1;
-                              if (bulkCounts[threshold] % (threshold + 1) === 0) {
-                                  isFree = true;
-                              }
-                          }
-
                           const hasDiscount = isPercentage && item.originalPrice && item.originalPrice > item.license.price;
                           
                           return (

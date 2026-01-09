@@ -81,30 +81,47 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsCartOpen(prev => !prev);
   };
 
-  // Calcul du total avec logique "N achetés = 1 offert" dynamique
+  // Calcul du total avec logique "Les moins chers sont offerts"
   const cartTotal = React.useMemo(() => {
     let runningTotal = 0;
     
-    // On utilise un compteur par "type de seuil" pour gérer correctement si jamais il y a des mix (peu probable mais robuste)
-    const counts: Record<number, number> = {};
+    // On sépare les articles en promotions groupées (BULK_DEAL) des autres
+    const bulkGroups: Record<number, CartItem[]> = {};
     
     cartItems.forEach(item => {
       if (item.promoType === 'BULK_DEAL') {
-        const threshold = item.bulkThreshold || 2; // Par défaut "Buy 2 Get 1" (seuil=2)
-        const currentCount = (counts[threshold] || 0) + 1;
-        counts[threshold] = currentCount;
-
-        // La gratuité s'applique sur le (threshold + 1)ème élément
-        // Ex: Seuil 1 (1 acheté 1 offert) -> Total 2 -> Le 2ème est gratuit (2 % 2 == 0)
-        // Ex: Seuil 2 (2 achetés 1 offert) -> Total 3 -> Le 3ème est gratuit (3 % 3 == 0)
-        if (currentCount % (threshold + 1) === 0) {
-           runningTotal += 0;
-        } else {
-           runningTotal += item.license.price;
+        const threshold = item.bulkThreshold || 2;
+        if (!bulkGroups[threshold]) {
+          bulkGroups[threshold] = [];
         }
+        bulkGroups[threshold].push(item);
       } else {
+        // Articles hors promo groupée ou remise simple
         runningTotal += item.license.price;
       }
+    });
+
+    // Traitement des groupes (ex: tous les "2 achetés 1 offert")
+    Object.keys(bulkGroups).forEach(key => {
+        const threshold = parseInt(key);
+        const items = bulkGroups[threshold];
+        
+        // On trie par prix décroissant (du plus cher au moins cher)
+        // Cela permet d'identifier les moins chers qui seront à la fin du tableau
+        items.sort((a, b) => b.license.price - a.license.price);
+
+        // Nombre d'articles gratuits : partie entière de (Total / Taille du lot)
+        // Taille du lot = threshold + 1 (ex: pour "2 achetés = 1 offert", le lot est de 3)
+        const bundleSize = threshold + 1;
+        const freeCount = Math.floor(items.length / bundleSize);
+
+        // Les 'freeCount' derniers articles du tableau trié (donc les moins chers) sont gratuits
+        const itemsToPay = items.length - freeCount;
+
+        // On additionne le prix des articles à payer (les premiers de la liste triée)
+        for (let i = 0; i < itemsToPay; i++) {
+            runningTotal += items[i].license.price;
+        }
     });
     
     return runningTotal;
