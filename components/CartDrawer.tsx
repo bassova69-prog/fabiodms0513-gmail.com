@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Trash2, ShoppingBag, CreditCard, Lock, Loader2, Tag, Zap, ChevronLeft, User, MapPin, Mail } from 'lucide-react';
+import { X, Trash2, ShoppingBag, CreditCard, Lock, Loader2, Tag, Zap, ChevronLeft, User, MapPin, Mail, ArrowRight } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { CustomerDetails, CartItem } from '../types';
 
@@ -167,10 +167,15 @@ export const CartDrawer: React.FC = () => {
               // VUE PANIER LISTE
               <div className="p-6 space-y-4">
                   {cartItems.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-24 opacity-30">
-                          <ShoppingBag className="w-16 h-16 mb-6 mx-auto" />
-                          <p className="text-xl font-bold">Ton panier est vide</p>
-                          <p className="text-sm mt-2 italic">Choisis tes beats dans le catalogue.</p>
+                      <div className="h-full flex flex-col items-center justify-center text-center py-24">
+                          <ShoppingBag className="w-16 h-16 mb-6 mx-auto text-[#3d2b1f]" />
+                          <p className="text-xl font-bold text-[#5c4a3e]">Ton panier est vide</p>
+                          <button 
+                             onClick={() => { toggleCart(); navigate('/beats'); }}
+                             className="mt-6 flex items-center gap-2 px-6 py-3 bg-[#1a120b] hover:bg-[#2a1e16] text-amber-500 hover:text-white border border-[#3d2b1f] rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                          >
+                             Découvrir le catalogue <ArrowRight className="w-4 h-4" />
+                          </button>
                       </div>
                   ) : (
                       cartItems.map((item) => {
@@ -326,14 +331,27 @@ export const CartDrawer: React.FC = () => {
                 </div>
 
                 {view === 'cart' ? (
-                  <button 
-                      onClick={handleProceedToCheckout}
-                      disabled={isProcessing}
-                      className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-black font-black py-5 rounded-2xl flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 disabled:opacity-50"
-                  >
-                      <CreditCard className="w-6 h-6" />
-                      PROCÉDER AU PAIEMENT
-                  </button>
+                  <div className="space-y-3">
+                    <button 
+                        onClick={handleProceedToCheckout}
+                        disabled={isProcessing}
+                        className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-black font-black py-5 rounded-2xl flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        <CreditCard className="w-6 h-6" />
+                        PROCÉDER AU PAIEMENT
+                    </button>
+                    
+                    <button 
+                        onClick={() => {
+                            toggleCart();
+                            navigate('/beats');
+                        }}
+                        className="w-full py-3 text-[#8c7a6b] hover:text-white font-bold text-[10px] uppercase tracking-widest transition-colors flex items-center justify-center gap-2 group"
+                    >
+                        <ShoppingBag className="w-3 h-3 group-hover:text-amber-500 transition-colors" />
+                        Poursuivre les achats
+                    </button>
+                  </div>
                 ) : (
                   <button 
                       onClick={handlePayment}
