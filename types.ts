@@ -54,6 +54,7 @@ export interface CartItem {
   beat: Beat;
   license: License;
   originalPrice?: number;
+  promoType?: 'PERCENTAGE' | 'BULK_DEAL';
 }
 
 // Utilisé pour l'enregistrement des ventes dans Success.tsx

@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Trash2, ShoppingBag, CreditCard, Lock, Loader2, Tag } from 'lucide-react';
+import { X, Trash2, ShoppingBag, CreditCard, Lock, Loader2, Tag, Zap } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 
 export const CartDrawer: React.FC = () => {
@@ -79,6 +79,7 @@ export const CartDrawer: React.FC = () => {
                     cartItems.map((item) => {
                         // Détection d'une remise appliquée
                         const hasDiscount = item.originalPrice && item.originalPrice > item.license.price;
+                        const isBulk = item.promoType === 'BULK_DEAL';
                         
                         return (
                             <div key={item.id} className="flex gap-4 p-4 bg-[#1a120b] rounded-2xl border border-[#3d2b1f] animate-in fade-in slide-in-from-right-4 group hover:border-amber-900/50 transition-colors">
@@ -98,8 +99,9 @@ export const CartDrawer: React.FC = () => {
                                                 {item.license?.name}
                                             </span>
                                             {hasDiscount && (
-                                                <span className="text-[9px] text-emerald-400 flex items-center gap-1 font-bold">
-                                                    <Tag className="w-3 h-3" /> REMISE
+                                                <span className={`text-[9px] flex items-center gap-1 font-bold ${isBulk ? 'text-amber-500' : 'text-emerald-400'}`}>
+                                                    {isBulk ? <Zap className="w-3 h-3" /> : <Tag className="w-3 h-3" />}
+                                                    {isBulk ? 'OFFRE' : 'REMISE'}
                                                 </span>
                                             )}
                                         </div>

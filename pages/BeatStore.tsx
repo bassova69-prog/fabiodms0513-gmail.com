@@ -169,6 +169,7 @@ export const BeatStore: React.FC = () => {
 
     const originalPrice = license.price;
     let finalPrice = license.price;
+    let appliedPromoType: 'PERCENTAGE' | 'BULK_DEAL' | undefined = undefined;
 
     if (promo && promo.isActive) {
       const isGlobal = promo.scope === 'GLOBAL';
@@ -178,11 +179,12 @@ export const BeatStore: React.FC = () => {
       // Si la promo est globale OU que le beat est ciblé, on applique la réduction mathématique
       if (isGlobal || isTargeted) {
           finalPrice = Number((originalPrice * (1 - promo.discountPercentage / 100)).toFixed(2));
+          appliedPromoType = promo.type;
       }
     }
 
     const finalLicense = { ...license, price: finalPrice };
-    addToCart(beat, finalLicense, originalPrice);
+    addToCart(beat, finalLicense, originalPrice, appliedPromoType);
     closePurchaseModal();
   };
 
