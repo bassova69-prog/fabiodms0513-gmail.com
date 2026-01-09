@@ -72,6 +72,7 @@ export const BeatStore: React.FC = () => {
         const urlPromoBG = searchParams.get('bg');
         const urlPct = searchParams.get('pct') || searchParams.get('percent') || searchParams.get('discount') || searchParams.get('val') || searchParams.get('value'); 
         const urlIds = searchParams.get('ids'); 
+        const urlBuy = searchParams.get('buy'); // Paramètre pour "Buy X Get 1 Free"
         
         setPromo({
           isActive: true,
@@ -79,7 +80,8 @@ export const BeatStore: React.FC = () => {
           discountPercentage: urlPct ? parseInt(urlPct) : 20,
           type: (urlPromoBG === 'orange' || urlPromoMessage.includes('OFFERT')) ? 'BULK_DEAL' : 'PERCENTAGE',
           scope: urlIds ? 'SPECIFIC' : 'GLOBAL',
-          targetBeatIds: urlIds ? urlIds.split(',') : []
+          targetBeatIds: urlIds ? urlIds.split(',') : [],
+          bulkThreshold: urlBuy ? parseInt(urlBuy) : 2 // Défaut: 2 (2 achetés = 1 offert)
         });
         return;
     }
@@ -170,6 +172,7 @@ export const BeatStore: React.FC = () => {
     const originalPrice = license.price;
     let finalPrice = license.price;
     let appliedPromoType: 'PERCENTAGE' | 'BULK_DEAL' | undefined = undefined;
+    let appliedBulkThreshold: number | undefined = undefined;
 
     if (promo && promo.isActive) {
       const isGlobal = promo.scope === 'GLOBAL';
@@ -181,6 +184,7 @@ export const BeatStore: React.FC = () => {
              // La réduction (gratuité) se fera dans le panier.
              finalPrice = originalPrice;
              appliedPromoType = 'BULK_DEAL';
+             appliedBulkThreshold = promo.bulkThreshold || 2;
           } else {
              finalPrice = Number((originalPrice * (1 - promo.discountPercentage / 100)).toFixed(2));
              appliedPromoType = 'PERCENTAGE';
@@ -189,7 +193,7 @@ export const BeatStore: React.FC = () => {
     }
 
     const finalLicense = { ...license, price: finalPrice };
-    addToCart(beat, finalLicense, originalPrice, appliedPromoType);
+    addToCart(beat, finalLicense, originalPrice, appliedPromoType, appliedBulkThreshold);
     closePurchaseModal();
   };
 

@@ -5,7 +5,7 @@ import { Beat, License, CartItem } from '../types';
 interface CartContextType {
   cartItems: CartItem[];
   isCartOpen: boolean;
-  addToCart: (beat: Beat, license: License, originalPrice?: number, promoType?: 'PERCENTAGE' | 'BULK_DEAL') => void;
+  addToCart: (beat: Beat, license: License, originalPrice?: number, promoType?: 'PERCENTAGE' | 'BULK_DEAL', bulkThreshold?: number) => void;
   removeFromCart: (cartItemId: string) => void;
   clearCart: () => void;
   toggleCart: () => void;
@@ -49,7 +49,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [cartItems]);
 
-  const addToCart = (beat: Beat, license: License, originalPrice?: number, promoType?: 'PERCENTAGE' | 'BULK_DEAL') => {
+  const addToCart = (beat: Beat, license: License, originalPrice?: number, promoType?: 'PERCENTAGE' | 'BULK_DEAL', bulkThreshold?: number) => {
     if (!beat || !license) return;
 
     const newItem: CartItem = {
@@ -57,7 +57,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       beat,
       license,
       originalPrice: originalPrice || license.price,
-      promoType: promoType
+      promoType: promoType,
+      bulkThreshold: bulkThreshold
     };
     
     setCartItems(prev => [...prev, newItem]);
@@ -80,16 +81,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsCartOpen(prev => !prev);
   };
 
-  // Calcul du total avec logique "3ème article BULK_DEAL offert"
+  // Calcul du total avec logique "N achetés = 1 offert" dynamique
   const cartTotal = React.useMemo(() => {
     let runningTotal = 0;
-    let bulkCount = 0;
+    
+    // On utilise un compteur par "type de seuil" pour gérer correctement si jamais il y a des mix (peu probable mais robuste)
+    const counts: Record<number, number> = {};
     
     cartItems.forEach(item => {
       if (item.promoType === 'BULK_DEAL') {
-        bulkCount++;
-        // Le 3ème, 6ème, 9ème... article ajouté est offert
-        if (bulkCount % 3 === 0) {
+        const threshold = item.bulkThreshold || 2; // Par défaut "Buy 2 Get 1" (seuil=2)
+        const currentCount = (counts[threshold] || 0) + 1;
+        counts[threshold] = currentCount;
+
+        // La gratuité s'applique sur le (threshold + 1)ème élément
+        // Ex: Seuil 1 (1 acheté 1 offert) -> Total 2 -> Le 2ème est gratuit (2 % 2 == 0)
+        // Ex: Seuil 2 (2 achetés 1 offert) -> Total 3 -> Le 3ème est gratuit (3 % 3 == 0)
+        if (currentCount % (threshold + 1) === 0) {
            runningTotal += 0;
         } else {
            runningTotal += item.license.price;

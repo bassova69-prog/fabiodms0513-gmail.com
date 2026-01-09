@@ -15,6 +15,7 @@ export interface StorePromotion {
   type?: 'PERCENTAGE' | 'BULK_DEAL';
   scope?: 'GLOBAL' | 'SPECIFIC';
   targetBeatIds?: string[];
+  bulkThreshold?: number; // Nombre d'articles à payer pour en avoir 1 gratuit (ex: 2 pour "2 achetés = 1 offert")
 }
 
 export interface Beat {
@@ -55,6 +56,7 @@ export interface CartItem {
   license: License;
   originalPrice?: number;
   promoType?: 'PERCENTAGE' | 'BULK_DEAL';
+  bulkThreshold?: number;
 }
 
 // Utilisé pour l'enregistrement des ventes dans Success.tsx

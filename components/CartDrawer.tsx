@@ -35,7 +35,7 @@ export const CartDrawer: React.FC = () => {
   if (!isCartOpen) return null;
 
   // Compteur local pour l'affichage (logique identique à CartContext)
-  let bulkCount = 0;
+  const bulkCounts: Record<number, number> = {};
 
   return (
     <>
@@ -86,8 +86,9 @@ export const CartDrawer: React.FC = () => {
                         
                         let isFree = false;
                         if (isBulk) {
-                            bulkCount++;
-                            if (bulkCount % 3 === 0) {
+                            const threshold = item.bulkThreshold || 2;
+                            bulkCounts[threshold] = (bulkCounts[threshold] || 0) + 1;
+                            if (bulkCounts[threshold] % (threshold + 1) === 0) {
                                 isFree = true;
                             }
                         }
