@@ -31,7 +31,7 @@ export const Home: React.FC = () => {
 
            <div className="absolute bottom-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300 flex items-center gap-3">
               <a 
-                href="https://youtube.com" 
+                href="https://www.youtube.com/@fabiodmsbeat" 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-[#ff0000]/90 backdrop-blur-sm text-white font-black px-6 py-2.5 rounded-full hover:bg-[#ff0000] hover:scale-105 transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest shadow-lg active:scale-95 border border-white/10"
