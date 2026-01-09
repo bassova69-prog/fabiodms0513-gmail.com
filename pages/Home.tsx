@@ -1,42 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { ARTIST_NAME } from '../constants';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Music4, Headphones, Layers, GraduationCap, ChevronRight, Music, Youtube, Clock, Instagram, Mic2, ArrowRight } from 'lucide-react';
-import { usePlayer } from '../contexts/PlayerContext';
-import { getAllBeats } from '../services/dbService';
-import { Beat } from '../types';
+import { Music4, Headphones, Layers, GraduationCap, ChevronRight, Music, Youtube, Clock, Instagram, Mic2, ArrowRight } from 'lucide-react';
 
 export const Home: React.FC = () => {
-  const { playBeat, currentBeat, isPlaying } = usePlayer();
   const navigate = useNavigate();
-  const [displayBeats, setDisplayBeats] = useState<Beat[]>([]);
-
-  useEffect(() => {
-    const fetchHomeBeats = async () => {
-      try {
-        const dbBeats = await getAllBeats();
-        if (Array.isArray(dbBeats) && dbBeats.length > 0) {
-          const validDbBeats = dbBeats.filter(b => b && typeof b === 'object');
-          setDisplayBeats(validDbBeats.slice(0, 4));
-        } else {
-          setDisplayBeats([]);
-        }
-      } catch (error) {
-        console.error("Erreur chargement beats home:", error);
-      }
-    };
-    fetchHomeBeats();
-  }, []);
-
-  const featuredBeat = displayBeats.length > 0 ? displayBeats[0] : null;
-
-  const handlePlayFeatured = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (featuredBeat) playBeat(featuredBeat);
-  };
-
-  const isFeaturedPlaying = isPlaying && featuredBeat && currentBeat?.id === featuredBeat.id;
 
   return (
     <div className="flex flex-col gap-14 pb-24">
@@ -58,22 +27,6 @@ export const Home: React.FC = () => {
                 <p className="text-xl md:text-2xl text-amber-500 font-bold uppercase tracking-[0.3em] mb-8 drop-shadow-lg">
                    Beatmaker & Producer
                 </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  {featuredBeat && (
-                    <button 
-                      onClick={handlePlayFeatured} 
-                      className="bg-white text-black font-black px-8 py-4 rounded-xl hover:bg-amber-500 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95 group/btn"
-                    >
-                        {isFeaturedPlaying ? (
-                          <div className="flex gap-1 items-end h-4">
-                            {[1,2,3].map(i => <div key={i} className="w-1 bg-black animate-pulse" style={{height: `${i*33}%`}}></div>)}
-                          </div>
-                        ) : <Play className="w-5 h-5 fill-current group-hover/btn:scale-125 transition-transform" />}
-                        {isFeaturedPlaying ? 'EN LECTURE' : 'ÉCOUTER MAINTENANT'}
-                    </button>
-                  )}
-                </div>
            </div>
 
            <div className="absolute bottom-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300 flex items-center gap-3">
