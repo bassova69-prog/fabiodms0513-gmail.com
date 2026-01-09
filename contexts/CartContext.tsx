@@ -5,7 +5,7 @@ import { Beat, License, CartItem } from '../types';
 interface CartContextType {
   cartItems: CartItem[];
   isCartOpen: boolean;
-  addToCart: (beat: Beat, license: License) => void;
+  addToCart: (beat: Beat, license: License, originalPrice?: number) => void;
   removeFromCart: (cartItemId: string) => void;
   clearCart: () => void;
   toggleCart: () => void;
@@ -49,13 +49,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [cartItems]);
 
-  const addToCart = (beat: Beat, license: License) => {
+  const addToCart = (beat: Beat, license: License, originalPrice?: number) => {
     if (!beat || !license) return;
 
     const newItem: CartItem = {
       id: `${beat.id}-${license.id}-${Date.now()}`,
       beat,
-      license
+      license,
+      originalPrice: originalPrice || license.price
     };
     
     setCartItems(prev => [...prev, newItem]);

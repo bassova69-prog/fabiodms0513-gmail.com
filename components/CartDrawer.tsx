@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Trash2, ShoppingBag, CreditCard, Lock, Loader2 } from 'lucide-react';
+import { X, Trash2, ShoppingBag, CreditCard, Lock, Loader2, Tag } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 
 export const CartDrawer: React.FC = () => {
@@ -76,31 +76,48 @@ export const CartDrawer: React.FC = () => {
                         <p className="text-sm mt-2 italic">Choisis tes beats dans le catalogue.</p>
                     </div>
                 ) : (
-                    cartItems.map((item) => (
-                        <div key={item.id} className="flex gap-4 p-4 bg-[#1a120b] rounded-2xl border border-[#3d2b1f] animate-in fade-in slide-in-from-right-4">
-                            <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden border border-[#3d2b1f] bg-black">
-                                <img src={item.beat?.cover_url} className="w-full h-full object-cover" alt={item.beat?.title} />
-                            </div>
-                            <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                                <div>
-                                    <div className="flex justify-between items-start gap-2">
-                                        <h3 className="font-bold text-[#fff8f0] text-sm truncate">{item.beat?.title}</h3>
-                                        <button onClick={() => removeFromCart(item.id)} className="text-[#5c4a3e] hover:text-red-400 transition-colors">
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                    cartItems.map((item) => {
+                        // Détection d'une remise appliquée
+                        const hasDiscount = item.originalPrice && item.originalPrice > item.license.price;
+                        
+                        return (
+                            <div key={item.id} className="flex gap-4 p-4 bg-[#1a120b] rounded-2xl border border-[#3d2b1f] animate-in fade-in slide-in-from-right-4 group hover:border-amber-900/50 transition-colors">
+                                <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden border border-[#3d2b1f] bg-black">
+                                    <img src={item.beat?.cover_url} className="w-full h-full object-cover" alt={item.beat?.title} />
+                                </div>
+                                <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                                    <div>
+                                        <div className="flex justify-between items-start gap-2">
+                                            <h3 className="font-bold text-[#fff8f0] text-sm truncate">{item.beat?.title}</h3>
+                                            <button onClick={() => removeFromCart(item.id)} className="text-[#5c4a3e] hover:text-red-400 transition-colors">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-900/30 bg-amber-900/10 text-amber-400 font-black inline-block uppercase">
+                                                {item.license?.name}
+                                            </span>
+                                            {hasDiscount && (
+                                                <span className="text-[9px] text-emerald-400 flex items-center gap-1 font-bold">
+                                                    <Tag className="w-3 h-3" /> REMISE
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-amber-900/30 bg-amber-900/10 text-amber-400 font-black mt-2 inline-block uppercase">
-                                        {item.license?.name}
-                                    </span>
-                                </div>
-                                <div className="flex justify-end">
-                                    <span className="font-black text-emerald-400 text-lg">
-                                        {(Number(item.license?.price) || 0).toFixed(2)}€
-                                    </span>
+                                    <div className="flex justify-end items-center gap-2">
+                                        {hasDiscount && (
+                                            <span className="text-xs text-[#5c4a3e] line-through decoration-red-500/50">
+                                                {item.originalPrice?.toFixed(2)}€
+                                            </span>
+                                        )}
+                                        <span className={`font-black text-lg ${hasDiscount ? 'text-emerald-400' : 'text-white'}`}>
+                                            {(Number(item.license?.price) || 0).toFixed(2)}€
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </div>

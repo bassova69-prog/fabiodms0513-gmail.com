@@ -98,7 +98,7 @@ export const BeatStore: React.FC = () => {
   useEffect(() => {
     loadBeats();
     checkPromo();
-  }, [checkPromo]); // On ne met pas searchParams ici pour éviter boucle infinie si on change les params
+  }, [checkPromo]);
 
   // Logique de filtrage principale
   useEffect(() => {
@@ -122,7 +122,7 @@ export const BeatStore: React.FC = () => {
                     typeMatch = !!beat.stems_url;
                     break;
                 case 'EXCLUSIVE':
-                    typeMatch = !!beat.stems_url; // Généralement exclusif = stems requis
+                    typeMatch = !!beat.stems_url;
                     break;
                 default:
                     typeMatch = true;
@@ -145,23 +145,21 @@ export const BeatStore: React.FC = () => {
   const isPromoValidForBeat = (beatId: string) => {
     if (!promo || !promo.isActive) return false;
     if (promo.scope === 'GLOBAL') return true;
-    if (promo.scope === 'SPECIFIC' && promo.targetBeatIds?.includes(beatId)) return true;
+    
+    // Comparaison sécurisée (String vs String)
+    if (promo.scope === 'SPECIFIC' && promo.targetBeatIds) {
+        return promo.targetBeatIds.some(id => String(id) === String(beatId));
+    }
     return false;
   };
 
   const isLicenseAvailableForBeat = (fileType: string, beat: Beat) => {
     switch (fileType) {
-        case 'MP3':
-            // Vérification stricte du lien MP3
-            return !!beat.mp3_url;
-        case 'WAV':
-            return !!beat.wav_url;
-        case 'TRACKOUT':
-            return !!beat.stems_url;
-        case 'EXCLUSIVE':
-            return !!beat.stems_url;
-        default:
-            return false;
+        case 'MP3': return !!beat.mp3_url;
+        case 'WAV': return !!beat.wav_url;
+        case 'TRACKOUT': return !!beat.stems_url;
+        case 'EXCLUSIVE': return !!beat.stems_url;
+        default: return false;
     }
   };
 
@@ -169,18 +167,22 @@ export const BeatStore: React.FC = () => {
     e.stopPropagation();
     if (!isLicenseAvailableForBeat(license.fileType, beat)) return;
 
+    const originalPrice = license.price;
     let finalPrice = license.price;
+
     if (promo && promo.isActive) {
       const isGlobal = promo.scope === 'GLOBAL';
-      const isTargeted = promo.scope === 'SPECIFIC' && (promo.targetBeatIds?.includes(beat.id) ?? false);
+      // Comparaison sécurisée pour les IDs
+      const isTargeted = promo.scope === 'SPECIFIC' && promo.targetBeatIds?.some(id => String(id) === String(beat.id));
+      
+      // Si la promo est globale OU que le beat est ciblé, on applique la réduction mathématique
       if (isGlobal || isTargeted) {
-        if (promo.type === 'PERCENTAGE' || isTargeted) {
-          finalPrice = Number((license.price * (1 - promo.discountPercentage / 100)).toFixed(2));
-        }
+          finalPrice = Number((originalPrice * (1 - promo.discountPercentage / 100)).toFixed(2));
       }
     }
+
     const finalLicense = { ...license, price: finalPrice };
-    addToCart(beat, finalLicense);
+    addToCart(beat, finalLicense, originalPrice);
     closePurchaseModal();
   };
 

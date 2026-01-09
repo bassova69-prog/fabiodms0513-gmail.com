@@ -53,6 +53,7 @@ export interface CartItem {
   id: string;
   beat: Beat;
   license: License;
+  originalPrice?: number;
 }
 
 // Utilisé pour l'enregistrement des ventes dans Success.tsx
