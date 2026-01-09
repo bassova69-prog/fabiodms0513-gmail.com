@@ -1,9 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { ARTIST_NAME } from '../constants';
-import { BeatCard } from '../components/BeatCard';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, Youtube, Clock, Instagram } from 'lucide-react';
+import { Play, Music4, Headphones, Layers, GraduationCap, ChevronRight, Music, Youtube, Clock, Instagram, Mic2, ArrowRight } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { getAllBeats } from '../services/dbService';
 import { Beat } from '../types';
@@ -12,7 +11,6 @@ export const Home: React.FC = () => {
   const { playBeat, currentBeat, isPlaying } = usePlayer();
   const navigate = useNavigate();
   const [displayBeats, setDisplayBeats] = useState<Beat[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchHomeBeats = async () => {
@@ -26,8 +24,6 @@ export const Home: React.FC = () => {
         }
       } catch (error) {
         console.error("Erreur chargement beats home:", error);
-      } finally {
-        setIsLoading(false);
       }
     };
     fetchHomeBeats();
@@ -45,6 +41,7 @@ export const Home: React.FC = () => {
   return (
     <div className="flex flex-col gap-14 pb-24">
       
+      {/* HERO SECTION */}
       <section className="relative h-[450px] md:h-[500px] rounded-[2rem] overflow-hidden group shadow-2xl border border-[#2a2a2a]">
         <img 
           src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=2070&auto=format&fit=crop" 
@@ -101,6 +98,7 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* LICENCES */}
       <section className="px-2">
         <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
             <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
@@ -115,7 +113,7 @@ export const Home: React.FC = () => {
             {[
                 { name: 'MP3 LEASE', code: 'MP3', price: '29.99', icon: <Music className="text-blue-400" />, features: ['MP3 Untagged', '500k Streams', 'Usage Commercial'] },
                 { name: 'WAV LEASE', code: 'WAV', price: '49.99', icon: <Music4 className="text-cyan-400" />, features: ['WAV + MP3', 'Unlimited Streams', 'Radio Ready'] },
-                { name: 'TRACKOUT', code: 'TRACKOUT', price: '99.99', icon: <Layers className="text-orange-400" />, features: ['Stems (Pistes séparées)', 'Unlimited Streams', 'Idéal Studio'] },
+                { name: 'TRACKOUT', code: 'TRACKOUT', price: '199.99', icon: <Layers className="text-orange-400" />, features: ['Stems (Pistes séparées)', 'Unlimited Streams', 'Idéal Studio'] },
             ].map((tier, i) => (
                 <div key={i} className="p-6 rounded-2xl bg-[#121212] border border-[#2a2a2a] hover:border-amber-500/30 transition-all flex flex-col justify-between group h-full hover:-translate-y-1">
                     <div>
@@ -145,6 +143,64 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* NOUVELLE SECTION COLLAB */}
+      <section className="px-2">
+        <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
+            <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
+              <Mic2 className="w-8 h-8 text-amber-500" /> Collab & Services
+            </h2>
+        </div>
+
+        <div className="bg-[#1a120b] border border-[#3d2b1f] rounded-[2rem] p-8 md:p-12 relative overflow-hidden group hover:border-amber-500/30 transition-colors">
+            {/* Background Flair */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-[80px] rounded-full pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 blur-[80px] rounded-full pointer-events-none"></div>
+
+            <div className="relative z-10 flex flex-col lg:flex-row items-center gap-10">
+                <div className="flex-1 space-y-6 text-center lg:text-left">
+                    <h3 className="text-2xl md:text-4xl font-black text-white italic tracking-tight">
+                        Vous avez un univers, <span className="text-amber-500">j'ai le son.</span>
+                    </h3>
+                    
+                    <p className="text-[#a89080] font-medium text-lg">
+                        Contactez-moi pour toute demande de :
+                    </p>
+
+                    <div className="bg-[#120a05]/50 border border-[#3d2b1f] rounded-xl p-6 inline-block w-full">
+                        <ul className="space-y-4 text-left">
+                            <li className="flex items-start gap-3 text-sm md:text-base text-[#d4a373] font-bold">
+                                <span className="mt-1.5 w-1.5 h-1.5 bg-amber-500 rounded-full shrink-0"></span>
+                                Compositions exclusives <span className="text-[#8c7a6b] font-normal ml-1">(Leasing ou Exclusivité totale)</span>
+                            </li>
+                            <li className="flex items-start gap-3 text-sm md:text-base text-[#d4a373] font-bold">
+                                <span className="mt-1.5 w-1.5 h-1.5 bg-amber-500 rounded-full shrink-0"></span>
+                                Beatmaking sur-mesure <span className="text-[#8c7a6b] font-normal ml-1">(Co-création selon vos références)</span>
+                            </li>
+                            <li className="flex items-start gap-3 text-sm md:text-base text-[#d4a373] font-bold">
+                                <span className="mt-1.5 w-1.5 h-1.5 bg-amber-500 rounded-full shrink-0"></span>
+                                Toplines & Arrangements
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <p className="text-xs text-[#5c4a3e] italic border-l-2 border-[#3d2b1f] pl-4 text-left">
+                        Précisez votre style (Afro, Trap, R&B...) et vos précédentes sorties pour une réponse adaptée.
+                    </p>
+                </div>
+
+                <div className="shrink-0">
+                    <button 
+                        onClick={() => navigate('/contact')}
+                        className="bg-white hover:bg-amber-500 hover:text-black text-black font-black px-10 py-5 rounded-xl transition-all uppercase text-xs tracking-widest flex items-center gap-3 shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 group/btn"
+                    >
+                        Accéder au formulaire <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                </div>
+            </div>
+        </div>
+      </section>
+
+      {/* COACHING */}
       <section className="px-2">
         <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
             <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
@@ -175,32 +231,6 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      <section className="px-2">
-        <div className="flex items-center justify-between mb-8 border-b border-[#2a2a2a] pb-4">
-          <h2 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-2">
-            <Zap className="w-8 h-8 text-amber-500" /> Nouveautés
-          </h2>
-        </div>
-        
-        {displayBeats.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {displayBeats.map((beat) => (
-                <BeatCard 
-                  key={beat.id} 
-                  beat={beat} 
-                  onPurchase={() => navigate('/beats')} 
-                />
-              ))}
-            </div>
-        ) : (
-            <div className="py-20 text-center border-2 border-dashed border-[#2a2a2a] rounded-[2rem] flex flex-col items-center justify-center opacity-50">
-                <Music className="w-12 h-12 mb-4 text-[#5c4a3e]" />
-                <p className="text-lg font-bold text-[#8c7a6b]">
-                    {isLoading ? "Chargement du catalogue..." : "Aucune production disponible pour le moment"}
-                </p>
-            </div>
-        )}
-      </section>
     </div>
   );
 };

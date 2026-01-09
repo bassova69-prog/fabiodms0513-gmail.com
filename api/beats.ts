@@ -65,7 +65,7 @@ export default async function handler(
 
             const pMp3 = Number(find(['price_mp3', 'priceMp3', 'price_lease'], 29.99));
             const pWav = Number(find(['price_wav', 'priceWav'], 49.99));
-            const pTrack = Number(find(['price_trackout', 'priceTrackout'], 99.99));
+            const pTrack = Number(find(['price_trackout', 'priceTrackout'], 199.99));
             const pExclu = Number(find(['price_exclusive', 'priceExclusive'], 499.99));
 
             // Détection de date flexible
