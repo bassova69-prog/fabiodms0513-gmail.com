@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Music, GraduationCap, X } from 'lucide-react';
+import { Home, Music, GraduationCap, X, Mail } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PROFILE_IMAGE_URL, ARTIST_NAME } from '../constants';
 
@@ -17,6 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: Home, label: 'Accueil Studio', path: '/' },
     { icon: Music, label: 'Boutique de Beats', path: '/beats' },
     { icon: GraduationCap, label: 'Masterclass', path: '/masterclass' },
+    { icon: Mail, label: 'Collab / Contact', path: '/contact' },
   ];
 
   const handleNavigation = (path: string) => {

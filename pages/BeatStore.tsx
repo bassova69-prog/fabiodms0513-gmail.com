@@ -402,7 +402,9 @@ export const BeatStore: React.FC = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 custom-scrollbar bg-[#0f0f0f]">
               {selectedBeatForPurchase.licenses?.length > 0 ? (
-                  selectedBeatForPurchase.licenses.map((lic) => {
+                  selectedBeatForPurchase.licenses
+                  .filter(lic => lic.fileType !== 'EXCLUSIVE') // Licence EXCLUSIVE filtrée ici
+                  .map((lic) => {
                     const isValidPromo = isPromoValidForBeat(selectedBeatForPurchase.id);
                     const isAvailable = isLicenseAvailableForBeat(lic.fileType, selectedBeatForPurchase);
 

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { ARTIST_NAME } from '../constants';
 import { BeatCard } from '../components/BeatCard';
 import { Link, useNavigate } from 'react-router-dom';
-import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, Youtube, Clock } from 'lucide-react';
+import { Play, Music4, Headphones, Crown, Layers, GraduationCap, ChevronRight, Zap, Music, Youtube, Clock, Instagram } from 'lucide-react';
 import { usePlayer } from '../contexts/PlayerContext';
 import { getAllBeats } from '../services/dbService';
 import { Beat } from '../types';
@@ -63,7 +63,7 @@ export const Home: React.FC = () => {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  {featuredBeat ? (
+                  {featuredBeat && (
                     <button 
                       onClick={handlePlayFeatured} 
                       className="bg-white text-black font-black px-8 py-4 rounded-xl hover:bg-amber-500 transition-all flex items-center justify-center gap-3 uppercase text-xs tracking-widest shadow-[0_0_30px_rgba(255,255,255,0.2)] active:scale-95 group/btn"
@@ -75,21 +75,28 @@ export const Home: React.FC = () => {
                         ) : <Play className="w-5 h-5 fill-current group-hover/btn:scale-125 transition-transform" />}
                         {isFeaturedPlaying ? 'EN LECTURE' : 'ÉCOUTER MAINTENANT'}
                     </button>
-                  ) : (
-                    <button onClick={() => navigate('/beats')} className="bg-white text-black font-black px-8 py-4 rounded-xl hover:bg-amber-500 transition-colors uppercase text-xs tracking-widest">
-                       VOIR LE CATALOGUE
-                    </button>
                   )}
-                  
-                  <a 
-                    href="https://youtube.com" 
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-[#ff0000] text-white font-black px-8 py-4 rounded-xl hover:bg-[#cc0000] transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest shadow-lg active:scale-95"
-                  >
-                      <Youtube className="w-5 h-5 fill-current" /> MA CHAÎNE
-                  </a>
                 </div>
+           </div>
+
+           <div className="absolute bottom-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300 flex items-center gap-3">
+              <a 
+                href="https://youtube.com" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-[#ff0000]/90 backdrop-blur-sm text-white font-black px-6 py-2.5 rounded-full hover:bg-[#ff0000] hover:scale-105 transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest shadow-lg active:scale-95 border border-white/10"
+              >
+                  <Youtube className="w-3.5 h-3.5 fill-current" /> MA CHAÎNE
+              </a>
+              
+              <a 
+                href="https://www.instagram.com/fabio_dms/" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-gradient-to-r from-[#833ab4] to-[#fd1d1d] opacity-90 backdrop-blur-sm text-white font-black px-6 py-2.5 rounded-full hover:opacity-100 hover:scale-105 transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest shadow-lg active:scale-95 border border-white/10"
+              >
+                  <Instagram className="w-3.5 h-3.5" /> MON INSTAGRAM
+              </a>
            </div>
         </div>
       </section>
@@ -104,12 +111,11 @@ export const Home: React.FC = () => {
             </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
                 { name: 'MP3 LEASE', code: 'MP3', price: '29.99', icon: <Music className="text-blue-400" />, features: ['MP3 Untagged', '500k Streams', 'Usage Commercial'] },
                 { name: 'WAV LEASE', code: 'WAV', price: '49.99', icon: <Music4 className="text-cyan-400" />, features: ['WAV + MP3', 'Unlimited Streams', 'Radio Ready'] },
                 { name: 'TRACKOUT', code: 'TRACKOUT', price: '99.99', icon: <Layers className="text-orange-400" />, features: ['Stems (Pistes séparées)', 'Unlimited Streams', 'Idéal Studio'] },
-                { name: 'EXCLUSIF', code: 'EXCLUSIVE', price: 'Sur devis', icon: <Crown className="text-amber-500" />, features: ['Droits exclusifs', 'Retrait du catalogue', 'Publishing 50/50'] },
             ].map((tier, i) => (
                 <div key={i} className="p-6 rounded-2xl bg-[#121212] border border-[#2a2a2a] hover:border-amber-500/30 transition-all flex flex-col justify-between group h-full hover:-translate-y-1">
                     <div>

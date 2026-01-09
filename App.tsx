@@ -6,13 +6,14 @@ import { Sidebar } from './components/Sidebar';
 import { Home } from './pages/Home';
 import { BeatStore } from './pages/BeatStore';
 import { MasterclassStore } from './pages/MasterclassStore';
+import { Contact } from './pages/Contact';
 import { Success } from './pages/Success';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { BottomPlayer } from './components/BottomPlayer';
 import { CartProvider } from './contexts/CartContext';
 import { CartDrawer } from './components/CartDrawer';
 import { checkConnection } from './services/dbService';
-import { Database, Wifi, AlertTriangle, X, CheckCircle2, HardDrive } from 'lucide-react';
+import { Database, X, CheckCircle2, HardDrive } from 'lucide-react';
 
 const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -65,6 +66,7 @@ const App: React.FC = () => {
                     <Route path="/" element={<Home />} />
                     <Route path="/beats" element={<BeatStore />} />
                     <Route path="/masterclass" element={<MasterclassStore />} />
+                    <Route path="/contact" element={<Contact />} />
                     <Route path="/success" element={<Success />} />
                   </Routes>
                 </div>
